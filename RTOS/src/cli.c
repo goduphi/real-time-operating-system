@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include "uart0.h"
 #include "cli.h"
+#include "tString.h"
 
 #define MAX_HISTORY_NUMBER              5
 #define MAX_HISTORY_COMMAND_LENGTH      10
@@ -33,7 +34,7 @@ char* getCommandFromHistory()
 }
 
 // Gets a user defined string using the serial peripheral Uart0
-void getsUart0(USER_DATA* data)
+static void getsUart0(USER_DATA* data)
 {
     // Keeps count of how many characters we currently have in the buffer
     // Also serves to provide us with the position of the last character input
@@ -79,7 +80,7 @@ void getsUart0(USER_DATA* data)
 }
 
 // Tokenizes the string in place
-void parseField(USER_DATA* data)
+static void parseField(USER_DATA* data)
 {
     bool isNewToken = false;
     uint8_t i = 0;
@@ -111,25 +112,12 @@ void parseField(USER_DATA* data)
     return;
 }
 
-// Compares to strings to see if they are equal or not
-bool stringCompare(const char string1[], const char string2[])
-{
-    uint8_t index = 0;
-    // The comparison with MAX_CHARS is a bit unnecessary
-    while((string1[index] != '\0') && (string2[index] != '\0') && index < MAX_CHARS)
-    {
-        if(string1[index] != string2[index])
-            return false;
-        index++;
-    }
-    return !string1[index] && !string2[index];
-}
-
 // Checks to see if a particular command is valid or not
 bool isCommand(USER_DATA* data, const char strCommand[], uint8_t minArguments)
 {
+    // Only count the arguments
     if(data->fieldCount - 1 < minArguments) return false;
-    if(stringCompare(data->buffer, strCommand)) return true;
+    if(stringCompare(getFieldString(data, 0), strCommand, MAX_CHARS)) return true;
     return false;
 }
 
@@ -157,4 +145,73 @@ int32_t getFieldInteger(USER_DATA* data, uint8_t fieldNumber)
              signedInteger32bits = (signedInteger32bits * 10) + (numberString[i] - '0');
     }
     return signedInteger32bits;
+}
+
+void shell(void)
+{
+    initUart0();
+    setUart0BaudRate(115200, 40e6);
+
+    USER_DATA data;
+    // Set the field count to a know state 0
+    data.fieldCount = 0;
+
+    while(true)
+    {
+        putcUart0('>');
+        getsUart0(&data);
+        parseField(&data);
+
+        if(isCommand(&data, "reboot", 0))
+        {
+            putsUart0("Rebooting...\n");
+        }
+
+        if(isCommand(&data, "ps", 0))
+        {
+            putsUart0("PS called\n");
+        }
+
+        if(isCommand(&data, "kill", 1))
+        {
+            int32_t pid = getFieldInteger(&data, 1);
+            putsUart0("Process killed\n");
+        }
+
+        if(isCommand(&data, "pi", 1))
+        {
+            char* arg = getFieldString(&data, 1);
+            putsUart0("Priority inheritance on|off\n");
+        }
+
+        if(isCommand(&data, "preempt", 1))
+        {
+            char* arg = getFieldString(&data, 1);
+            putsUart0("Preemption on|off\n");
+        }
+
+        if(isCommand(&data, "sched", 1))
+        {
+            char* arg = getFieldString(&data, 1);
+            putsUart0("Scheduling prio|round-robin\n");
+        }
+
+        if(isCommand(&data, "pidof", 1))
+        {
+            char* arg = getFieldString(&data, 1);
+            putsUart0(arg);
+            putsUart0(" launched\n");
+        }
+
+        if(isCommand(&data, "proc_name", 1))
+        {
+            char* arg = getFieldString(&data, 1);
+            if(stringCompare(arg, "&", 1))
+            {
+                putsUart0("Running proc_name in the background\n");
+            }
+            else
+                putsUart0("Invalid argument to proc_name\n");
+        }
+    }
 }
