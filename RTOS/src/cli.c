@@ -1,0 +1,160 @@
+/* Common Terminal Interface Library
+ * Sarker Nadir Afridi Azmi
+ *
+ * This file contains the implementation of the functions prototypes defined in
+ * common_terminal_interface.h.
+ */
+
+#include <stdint.h>
+#include <stdbool.h>
+#include "uart0.h"
+#include "cli.h"
+
+#define MAX_HISTORY_NUMBER              5
+#define MAX_HISTORY_COMMAND_LENGTH      10
+
+// The commands will be stored in a queue
+char history[MAX_HISTORY_NUMBER][MAX_HISTORY_COMMAND_LENGTH];
+uint8_t historyReadPtr = 0;
+uint8_t historyWritePtr = 0;
+
+void updateHistory(const char* command)
+{
+    // Copy over the command to the history buffer
+    uint8_t i = 0;
+    for(i = 0; command[i] != '\0' && i < MAX_HISTORY_COMMAND_LENGTH; i++)
+        history[historyWritePtr][i] = command[i];
+    historyWritePtr = (historyWritePtr + 1) % MAX_HISTORY_NUMBER;
+}
+
+char* getCommandFromHistory()
+{
+    return 0;
+}
+
+// Gets a user defined string using the serial peripheral Uart0
+void getsUart0(USER_DATA* data)
+{
+    // Keeps count of how many characters we currently have in the buffer
+    // Also serves to provide us with the position of the last character input
+    uint8_t count = 0;
+
+    while(true)
+    {
+        char c = getcUart0();
+
+        // If the character is a backspace
+        // Ctrl-H or Ctrl-?
+        if(c == 8 || c == 127)
+        {
+            // If the count is greater than zero, we decrement the count
+            // This means we are essentially erasing the previous character
+            // Else, we just look for new characters
+            if(count > 0)
+                count--;
+            else
+                continue;
+        }
+        // If the character is a carriage return (13) or a line feed (10)
+        else if(c == 13 || c == 10)
+        {
+            data->buffer[count] = 0;
+            // Store the current command in the history buffer
+            updateHistory(data->buffer);
+            return;
+        }
+        else if(c < 32)
+            continue;
+        // If the character is anything greater than a space
+        else if(c >= 32)
+        {
+            data->buffer[count++] = c;
+            if(count == MAX_CHARS)
+            {
+                data->buffer[count] = '\0';
+                return;
+            }
+        }
+    }
+}
+
+// Tokenizes the string in place
+void parseField(USER_DATA* data)
+{
+    bool isNewToken = false;
+    uint8_t i = 0;
+    for(i = 0; (data->buffer[i] != '\0') && (data->fieldCount < MAX_FIELDS); i++)
+    {
+        // Only tokenize alpha numeric characters
+        if(((data->buffer[i] >= 'a' && data->buffer[i] <= 'z') ||
+            (data->buffer[i] >= '0' && data->buffer[i] <= '9') ||
+            (data->buffer[i] >= 'A' && data->buffer[i] <= 'Z')) &&
+            !isNewToken)
+        {
+            isNewToken = true;
+            // Record where this new token starts
+            data->fieldPosition[data->fieldCount] = i;
+            if(data->buffer[i] >= '0' && data->buffer[i] <= '9')
+                data->fieldType[data->fieldCount++] = 'n';
+            else
+                data->fieldType[data->fieldCount++] = 'a';
+        }
+        else if(!(data->buffer[i] >= 'a' && data->buffer[i] <= 'z') &&
+                !(data->buffer[i] >= '0' && data->buffer[i] <= '9') &&
+                !(data->buffer[i] >= 'A' && data->buffer[i] <= 'Z'))
+        {
+            isNewToken = false;
+            // Replace the delimeters with null terminators
+            data->buffer[i] = '\0';
+        }
+    }
+    return;
+}
+
+// Compares to strings to see if they are equal or not
+bool stringCompare(const char string1[], const char string2[])
+{
+    uint8_t index = 0;
+    // The comparison with MAX_CHARS is a bit unnecessary
+    while((string1[index] != '\0') && (string2[index] != '\0') && index < MAX_CHARS)
+    {
+        if(string1[index] != string2[index])
+            return false;
+        index++;
+    }
+    return !string1[index] && !string2[index];
+}
+
+// Checks to see if a particular command is valid or not
+bool isCommand(USER_DATA* data, const char strCommand[], uint8_t minArguments)
+{
+    if(data->fieldCount - 1 < minArguments) return false;
+    if(stringCompare(data->buffer, strCommand)) return true;
+    return false;
+}
+
+// Get a pointer to the requested string field
+char* getFieldString(USER_DATA* data, uint8_t fieldNumber)
+{
+    if((fieldNumber < MAX_FIELDS) &&
+       (fieldNumber < data->fieldCount) &&
+        (data->fieldType[fieldNumber] == 'a'))
+        return data->buffer + data->fieldPosition[fieldNumber];
+    return 0;
+}
+
+// Returns a 32-bit signed integer
+int32_t getFieldInteger(USER_DATA* data, uint8_t fieldNumber)
+{
+    int32_t signedInteger32bits = 0;
+    if((fieldNumber < MAX_FIELDS) &&
+       (fieldNumber < data->fieldCount) &&
+       (data->fieldType[fieldNumber] == 'n'))
+    {
+         char* numberString = data->buffer + data->fieldPosition[fieldNumber];
+         uint8_t i;
+         for(i = 0; numberString[i] != '\0'; i++)
+             signedInteger32bits = (signedInteger32bits * 10) + (numberString[i] - '0');
+    }
+    return signedInteger32bits;
+}
