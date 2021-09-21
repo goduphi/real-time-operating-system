@@ -7,9 +7,13 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "tm4c123gh6pm.h"
 #include "uart0.h"
+#include "gpio.h"
 #include "cli.h"
 #include "tString.h"
+
+#include <stdio.h>  // This will be removed from the future version as it takes 4096 Bytes of stack space to call
 
 #define MAX_HISTORY_NUMBER              5
 #define MAX_HISTORY_COMMAND_LENGTH      10
@@ -82,6 +86,7 @@ static void getsUart0(USER_DATA* data)
 // Tokenizes the string in place
 static void parseField(USER_DATA* data)
 {
+    data->fieldCount = 0;
     bool isNewToken = false;
     uint8_t i = 0;
     for(i = 0; (data->buffer[i] != '\0') && (data->fieldCount < MAX_FIELDS); i++)
@@ -89,7 +94,8 @@ static void parseField(USER_DATA* data)
         // Only tokenize alpha numeric characters
         if(((data->buffer[i] >= 'a' && data->buffer[i] <= 'z') ||
             (data->buffer[i] >= '0' && data->buffer[i] <= '9') ||
-            (data->buffer[i] >= 'A' && data->buffer[i] <= 'Z')) &&
+            (data->buffer[i] >= 'A' && data->buffer[i] <= 'Z') ||
+             data->buffer[i] >= '&') &&
             !isNewToken)
         {
             isNewToken = true;
@@ -102,7 +108,8 @@ static void parseField(USER_DATA* data)
         }
         else if(!(data->buffer[i] >= 'a' && data->buffer[i] <= 'z') &&
                 !(data->buffer[i] >= '0' && data->buffer[i] <= '9') &&
-                !(data->buffer[i] >= 'A' && data->buffer[i] <= 'Z'))
+                !(data->buffer[i] >= 'A' && data->buffer[i] <= 'Z') &&
+                !(data->buffer[i] >= '&'))
         {
             isNewToken = false;
             // Replace the delimeters with null terminators
@@ -147,14 +154,77 @@ int32_t getFieldInteger(USER_DATA* data, uint8_t fieldNumber)
     return signedInteger32bits;
 }
 
+// To be removed later
+void initLed()
+{
+    enablePort(PORTF);
+    selectPinPushPullOutput(PORTF, 1);
+}
+
+void rebootSystem()
+{
+    NVIC_APINT_R = (0x05FA0000 | NVIC_APINT_SYSRESETREQ);
+}
+
+// Displays the process (thread) information
+void ps()
+{
+    putsUart0("PS called\n");
+}
+
+// Displays the inter-process (thread) communication state
+void ipcs()
+{
+    putsUart0("IPCS called\n");
+}
+
+// Kills the process (thread) with matching PID
+void kill(int32_t pid)
+{
+    char buffer[16];
+    sprintf(buffer, "pid %d killed\n", pid);
+    putsUart0(buffer);
+}
+
+// Turns priority inheritance on or off
+void pi(bool on)
+{
+    char buffer[16];
+    sprintf(buffer, "PI %s\n", (on) ? "on" : "off");
+    putsUart0(buffer);
+}
+
+// Turns preemption on or off
+void preempt(bool on)
+{
+    char buffer[16];
+    sprintf(buffer, "preempt %s\n", (on) ? "on" : "off");
+    putsUart0(buffer);
+}
+
+// Selected priority or round-robin scheduling
+void sched(bool prioOn)
+{
+    char buffer[16];
+    sprintf(buffer, "sched %s\n", (prioOn) ? "prio" : "rr");
+    putsUart0(buffer);
+}
+
+// Displays the PID of the process (thread)
+void pidof(char name[])
+{
+    char buffer[32];
+    sprintf(buffer, "%s launched\n", name);
+    putsUart0(buffer);
+}
+
 void shell(void)
 {
     initUart0();
     setUart0BaudRate(115200, 40e6);
+    initLed();
 
     USER_DATA data;
-    // Set the field count to a know state 0
-    data.fieldCount = 0;
 
     while(true)
     {
@@ -165,50 +235,48 @@ void shell(void)
         if(isCommand(&data, "reboot", 0))
         {
             putsUart0("Rebooting...\n");
+            rebootSystem();
         }
-
-        if(isCommand(&data, "ps", 0))
+        else if(isCommand(&data, "ps", 0))
         {
-            putsUart0("PS called\n");
+            ps();
         }
-
-        if(isCommand(&data, "kill", 1))
+        else if(isCommand(&data, "ipcs", 0))
+        {
+            ipcs();
+        }
+        else if(isCommand(&data, "kill", 1))
         {
             int32_t pid = getFieldInteger(&data, 1);
-            putsUart0("Process killed\n");
+            kill(pid);
         }
-
-        if(isCommand(&data, "pi", 1))
+        else if(isCommand(&data, "pi", 1))
         {
             char* arg = getFieldString(&data, 1);
-            putsUart0("Priority inheritance on|off\n");
+            pi(stringCompare(arg, "ON", 2));
         }
-
-        if(isCommand(&data, "preempt", 1))
+        else if(isCommand(&data, "preempt", 1))
         {
             char* arg = getFieldString(&data, 1);
-            putsUart0("Preemption on|off\n");
+            preempt(stringCompare(arg, "ON", 2));
         }
-
-        if(isCommand(&data, "sched", 1))
+        else if(isCommand(&data, "sched", 1))
         {
             char* arg = getFieldString(&data, 1);
-            putsUart0("Scheduling prio|round-robin\n");
+            sched(stringCompare(arg, "prio", 4));
         }
-
-        if(isCommand(&data, "pidof", 1))
+        else if(isCommand(&data, "pidof", 1))
         {
             char* arg = getFieldString(&data, 1);
-            putsUart0(arg);
-            putsUart0(" launched\n");
+            pidof(arg);
         }
-
-        if(isCommand(&data, "proc_name", 1))
+        else if(isCommand(&data, "procName", 1))
         {
             char* arg = getFieldString(&data, 1);
             if(stringCompare(arg, "&", 1))
             {
                 putsUart0("Running proc_name in the background\n");
+                setPinValue(PORTF, 1, 1);
             }
             else
                 putsUart0("Invalid argument to proc_name\n");
