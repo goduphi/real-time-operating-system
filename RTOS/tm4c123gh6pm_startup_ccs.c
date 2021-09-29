@@ -56,6 +56,10 @@ extern uint32_t __STACK_TOP;
 //*****************************************************************************
 // To be added by user
 
+extern void MPUFaultHandler();
+extern void BusFaultHandler();
+extern void UsageFaultHandler();
+
 //*****************************************************************************
 //
 // The vector table.  Note that the proper constructs must be placed on this to
@@ -71,9 +75,9 @@ void (* const g_pfnVectors[])(void) =
     ResetISR,                               // The reset handler
     NmiSR,                                  // The NMI handler
     FaultISR,                               // The hard fault handler
-    IntDefaultHandler,                      // The MPU fault handler
-    IntDefaultHandler,                      // The bus fault handler
-    IntDefaultHandler,                      // The usage fault handler
+    MPUFaultHandler,                        // The MPU fault handler
+    BusFaultHandler,                        // The bus fault handler
+    UsageFaultHandler,                      // The usage fault handler
     0,                                      // Reserved
     0,                                      // Reserved
     0,                                      // Reserved

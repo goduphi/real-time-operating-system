@@ -2,7 +2,7 @@
  * tString.c
  *
  *  Created on: Sep 6, 2021
- *      Author: afrid
+ *      Author: Sarker Nadir Afridi Azmi
  */
 
 #include "tString.h"
