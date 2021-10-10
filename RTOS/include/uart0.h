@@ -25,6 +25,8 @@
 // Subroutines
 //-----------------------------------------------------------------------------
 
+#include <stdbool.h>
+
 void initUart0();
 void setUart0BaudRate(uint32_t baudRate, uint32_t fcyc);
 void putcUart0(char c);
