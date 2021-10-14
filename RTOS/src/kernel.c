@@ -46,7 +46,7 @@ uint32_t* getPsp()
  * combination with using the PSP for threads allows for separation of kernel space and user
  * space.
  */
-void enablePrivilegeMode()
+void disablePrivilegeMode()
 {
     __asm(" MRS R0, CONTROL");
     __asm(" ORR R0, #1");       // Set the TMPL bit to turn of privilege mode for threads.
@@ -58,25 +58,26 @@ void enableExceptionHandler(uint32_t type)
     NVIC_SYS_HND_CTRL_R |= type;
 }
 
-/*
-    #define NVIC_MPU_TYPE_R         (*((volatile uint32_t *)0xE000ED90))
-    #define NVIC_MPU_CTRL_R         (*((volatile uint32_t *)0xE000ED94))
-    #define NVIC_MPU_NUMBER_R       (*((volatile uint32_t *)0xE000ED98))
-    #define NVIC_MPU_BASE_R         (*((volatile uint32_t *)0xE000ED9C))
-    #define NVIC_MPU_ATTR_R         (*((volatile uint32_t *)0xE000EDA0))
-    #define NVIC_MPU_BASE1_R        (*((volatile uint32_t *)0xE000EDA4))
-    #define NVIC_MPU_ATTR1_R        (*((volatile uint32_t *)0xE000EDA8))
-    #define NVIC_MPU_BASE2_R        (*((volatile uint32_t *)0xE000EDAC))
-    #define NVIC_MPU_ATTR2_R        (*((volatile uint32_t *)0xE000EDB0))
-    #define NVIC_MPU_BASE3_R        (*((volatile uint32_t *)0xE000EDB4))
-    #define NVIC_MPU_ATTR3_R        (*((volatile uint32_t *)0xE000EDB8))
- */
+// This section is dedicated to MPU initialization
+// Rules for accessing memory
 
+#define AP_ACCESS_PRIVILEGE (1 << 24)
 #define AP_FULL_ACCESS      (3 << 24)
 #define SUBREGION_DISABLE   (1 << 8)
 #define R_SIZE(x)           (x << 1)        // This refers to the SIZE variable for Region size = 2^(SIZE + 1)
 
-// This section is dedicated to MPU initialization
+// This will be the background region that gives access to the entire memory range
+// Remove Executable privilege since we do not want everyone to be able to execute bit-banded memory for example
+void enableBackgroundRegionRule()
+{
+    // Region 0 will be used to give RWX access for both privilege and unprivilege
+    NVIC_MPU_BASE_R = 0x00000000 | NVIC_MPU_BASE_VALID | REGION_0;
+    // Region size = 2^(SIZE + 1)
+    // For the entire memory range, the SIZE would equal 0x1F, page 192
+    NVIC_MPU_ATTR_R = NVIC_MPU_ATTR_XN | AP_FULL_ACCESS | NVIC_MPU_ATTR_SHAREABLE | NVIC_MPU_ATTR_CACHEABLE
+                    | NVIC_MPU_ATTR_BUFFRABLE | R_SIZE(0x1F) | NVIC_MPU_ATTR_ENABLE;
+}
+
 void enableFlashRule()
 {
     // Set up the address for the MPU base
@@ -86,21 +87,40 @@ void enableFlashRule()
     // We will also use region 0 due to the relative prioritization
     // of the 8 memory regions
     // Base address | Valid Bit | Region Number
-    NVIC_MPU_BASE_R = 0x00000000 | NVIC_MPU_BASE_VALID | 0x00000000;
+    NVIC_MPU_BASE_R = 0x00000000 | NVIC_MPU_BASE_VALID | REGION_1;
     // Region size = 2^(SIZE + 1)
     // For 256K, it will be 2^18, where SIZE = 17
     NVIC_MPU_ATTR_R = AP_FULL_ACCESS | NVIC_MPU_ATTR_CACHEABLE | R_SIZE(17) | NVIC_MPU_ATTR_ENABLE;
 }
 
-void enableSRAMRule()
+// This rule takes away RW privilege
+// Parameters: Starting address of the region, SIZE parameter of 2^(SIZE + 1), Region number
+void enableSRAMRule(uint32_t startAddress, uint32_t size, uint32_t region)
 {
-    // We will also use region 1 due to the relative prioritization
-    // of the 8 memory regions
     // Base address | Valid Bit | Region Number
-    NVIC_MPU_BASE_R = 0x20000000 | NVIC_MPU_BASE_VALID | 0x00000001;
+    NVIC_MPU_BASE_R = startAddress | NVIC_MPU_BASE_VALID | region;
     // Region size = 2^(SIZE + 1)
-    // For 32K, it will be 2^15, where SIZE = 14
-    NVIC_MPU_ATTR_R = NVIC_MPU_ATTR_XN | AP_FULL_ACCESS | NVIC_MPU_ATTR_CACHEABLE | R_SIZE(14) | NVIC_MPU_ATTR_ENABLE;
+    NVIC_MPU_ATTR_R = AP_ACCESS_PRIVILEGE | NVIC_MPU_ATTR_SHAREABLE | NVIC_MPU_ATTR_CACHEABLE | R_SIZE(size) | NVIC_MPU_ATTR_ENABLE;
+}
+
+void sRAMSubregionDisable(uint8_t region, uint32_t subregion)
+{
+    if(region < (REGION_2 & 0xFF))
+        return;
+    // Base address | Valid Bit | Region Number
+    NVIC_MPU_NUMBER_R = region;
+    // Disable the sub-regions
+    NVIC_MPU_ATTR_R |= subregion << 8;
+}
+
+void sRAMSubregionEnable(uint8_t region, uint32_t subregion)
+{
+    if(region < (REGION_2 & 0xFF))
+        return;
+    // Select the region
+    NVIC_MPU_NUMBER_R = region;
+    // Enable the sub-regions
+    NVIC_MPU_ATTR_R &= ~(subregion << 8);
 }
 
 void enableMPU()
