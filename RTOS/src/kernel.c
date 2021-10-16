@@ -11,6 +11,7 @@
 #include "tm4c123gh6pm.h"
 #include "kernel.h"
 #include "uart0.h"
+#include "utils.h"
 
 /*
  * Set's the threads to be run using PSP. By default, threads make use of the MSP,
@@ -31,11 +32,6 @@ void setPspMode()
 void setPsp(uint32_t address)
 {
     __asm(" MSR PSP, R0");      // Move the new stack pointer into the process stack
-}
-
-uint32_t* getPsp()
-{
-    return 0;
 }
 
 /*
@@ -105,7 +101,7 @@ void enableSRAMRule(uint32_t startAddress, uint32_t size, uint32_t region)
 
 void sRAMSubregionDisable(uint8_t region, uint32_t subregion)
 {
-    if(region < (REGION_2 & 0xFF))
+    if(region < (REGION_2 & 0xFF) || (subregion > (0xFF << 8)) || (subregion & 0xFF != 0))
         return;
     // Base address | Valid Bit | Region Number
     NVIC_MPU_NUMBER_R = region;
@@ -115,7 +111,7 @@ void sRAMSubregionDisable(uint8_t region, uint32_t subregion)
 
 void sRAMSubregionEnable(uint8_t region, uint32_t subregion)
 {
-    if(region < (REGION_2 & 0xFF))
+    if(region < (REGION_2 & 0xFF) || (subregion > (0xFF << 8)) || (subregion & 0xFF != 0))
         return;
     // Select the region
     NVIC_MPU_NUMBER_R = region;
@@ -129,8 +125,89 @@ void enableMPU()
     NVIC_MPU_CTRL_R = NVIC_MPU_CTRL_ENABLE;
 }
 
+static uint32_t* getMsp()
+{
+    __asm(" MRS R0, MSP");
+}
+
+static uint32_t* getPsp()
+{
+    __asm(" MRS R0, PSP");
+}
+
 void MPUFaultHandler()
 {
+    putsUart0("\n\nMPU fault in process N\n\n");
+
+    uint32_t* msp = getMsp();
+    uint32_t* psp = getPsp();
+
+    // Print MSP and PSP
+    putsUart0("\n MSP = 0x");
+    printUint32InHex((uint32_t)msp);
+    putcUart0('\n');
+
+    putsUart0(" PSP = 0x");
+    printUint32InHex((uint32_t)psp);
+    putcUart0('\n');
+
+    putsUart0("mFault Flags = 0x");
+    printUint32InHex(NVIC_FAULT_STAT_R & 0xFF);
+    putcUart0('\n');
+
+    uint32_t faultAddress = NVIC_MM_ADDR_R;
+    if(NVIC_FAULT_STAT_R & NVIC_FAULT_STAT_MMARV)
+    {
+        putsUart0("Faulted at address 0x");
+        printUint32InHex(faultAddress);
+        putcUart0('\n');
+    }
+    else
+        putsUart0("Fault address not valid.\n");
+
+    // Process stack dump
+    putsUart0("\nStack Dump\n-----------------\n  R0 = 0x");
+    printUint32InHex(*(psp));
+    putcUart0('\n');
+
+    putsUart0("  R1 = 0x");
+    printUint32InHex(*(psp + 1));
+    putcUart0('\n');
+
+    putsUart0("  R2 = 0x");
+    printUint32InHex(*(psp + 2));
+    putcUart0('\n');
+
+    putsUart0("  R3 = 0x");
+    printUint32InHex(*(psp + 3));
+    putcUart0('\n');
+
+    putsUart0(" R12 = 0x");
+    printUint32InHex(*(psp + 4));
+    putcUart0('\n');
+
+    putsUart0("  LR = 0x");
+    printUint32InHex(*(psp + 5));
+    putcUart0('\n');
+
+    putsUart0("  PC = 0x");
+    printUint32InHex(*(psp + 6));
+    putcUart0('\n');
+
+    putsUart0("xPSR = 0x");
+    printUint32InHex(*(psp + 7));
+    putcUart0('\n');
+
+    // Clear MPU fault pending flag, page 173
+    NVIC_SYS_HND_CTRL_R &= ~NVIC_SYS_HND_CTRL_MEMP;
+
+    // Trigger a PendSV ISR call
+    NVIC_INT_CTRL_R |= NVIC_INT_CTRL_PEND_SV;
+}
+
+void PendSVISR()
+{
+    putsUart0("\n\nPendSVIsr called from MPU Fault Handler\n\n");
     //
     // Enter an infinite loop.
     //
@@ -141,6 +218,7 @@ void MPUFaultHandler()
 
 void BusFaultHandler()
 {
+    putsUart0("\n\nBus fault in process N\n\n");
     //
     // Enter an infinite loop.
     //
@@ -151,10 +229,38 @@ void BusFaultHandler()
 
 void UsageFaultHandler()
 {
+    putsUart0("\n\nUsage fault in process N\n\n");
     //
     // Enter an infinite loop.
     //
-    putsUart0("Usage fault occurred\n");
+    while(1)
+    {
+    }
+}
+
+void FaultISR()
+{
+    putsUart0("\n\nHard fault in process N\n\n");
+
+    uint32_t* msp = getMsp();
+    uint32_t* psp = getPsp();
+
+    // Print MSP and PSP
+    putsUart0("\n MSP = 0x");
+    printUint32InHex((uint32_t)msp);
+    putcUart0('\n');
+
+    putsUart0(" PSP = 0x");
+    printUint32InHex((uint32_t)psp);
+    putcUart0('\n');
+
+    putsUart0("mFault Flags = 0x");
+    printUint32InHex(NVIC_FAULT_STAT_R & 0xFF);
+    putcUart0('\n');
+
+    //
+    // Enter an infinite loop.
+    //
     while(1)
     {
     }

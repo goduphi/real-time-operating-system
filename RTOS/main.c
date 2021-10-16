@@ -4,6 +4,7 @@
 #include "clock.h"
 #include "kernel.h"
 #include "cli.h"
+#include "uart0.h"
 
 #define N   256
 
@@ -45,8 +46,12 @@ int main(void)
 {
     initHw();
 
+    // This will be removed later
+    initUart0();
+
+    //NVIC_SYS_HND_CTRL_PNDSV
     // Enable the Memory Management Fault Handler
-    enableExceptionHandler(NVIC_SYS_HND_CTRL_MEM);
+    enableExceptionHandler(NVIC_SYS_HND_CTRL_USAGE | NVIC_SYS_HND_CTRL_BUS | NVIC_SYS_HND_CTRL_MEM);
 
     setPsp((uint32_t)&ThreadStack[N]);
     setPspMode();

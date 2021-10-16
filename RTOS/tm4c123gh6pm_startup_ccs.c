@@ -57,8 +57,10 @@ extern uint32_t __STACK_TOP;
 // To be added by user
 
 extern void MPUFaultHandler();
+extern void PendSVISR();
 extern void BusFaultHandler();
 extern void UsageFaultHandler();
+extern void FaultISR();
 
 //*****************************************************************************
 //
@@ -85,7 +87,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // SVCall handler
     IntDefaultHandler,                      // Debug monitor handler
     0,                                      // Reserved
-    IntDefaultHandler,                      // The PendSV handler
+    PendSVISR,                              // The PendSV handler
     IntDefaultHandler,                      // The SysTick handler
     IntDefaultHandler,                      // GPIO Port A
     IntDefaultHandler,                      // GPIO Port B
@@ -274,6 +276,10 @@ NmiSR(void)
 // for examination by a debugger.
 //
 //*****************************************************************************
+
+// This has been relocated to kernel.c
+
+/*
 static void
 FaultISR(void)
 {
@@ -284,6 +290,7 @@ FaultISR(void)
     {
     }
 }
+*/
 
 //*****************************************************************************
 //
