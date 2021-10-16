@@ -207,7 +207,23 @@ void MPUFaultHandler()
 
 void PendSVISR()
 {
-    putsUart0("\n\nPendSVIsr called from MPU Fault Handler\n\n");
+    putsUart0("\n\nPendSVIsr in process N\n\n");
+
+    // Check if it's an instruction error or a data error
+    if(NVIC_FAULT_STAT_R & NVIC_FAULT_STAT_IERR)
+    {
+        // Clear instruction access violation
+        NVIC_FAULT_STAT_R |= NVIC_FAULT_STAT_IERR;
+        putsUart0("IERR, called from MPU\n\n");
+    }
+
+    if(NVIC_FAULT_STAT_R & NVIC_FAULT_STAT_DERR)
+    {
+        // Clear data access violation
+        NVIC_FAULT_STAT_R |= NVIC_FAULT_STAT_DERR;
+        putsUart0("DERR, called from MPU\n\n");
+    }
+
     //
     // Enter an infinite loop.
     //
@@ -230,6 +246,7 @@ void BusFaultHandler()
 void UsageFaultHandler()
 {
     putsUart0("\n\nUsage fault in process N\n\n");
+
     //
     // Enter an infinite loop.
     //
