@@ -387,8 +387,8 @@ bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackByt
             // Save the number of SRD bits
             tmp = nSrd;
             tcb[i].priority = priority;
-            // Start Address - Base / 1024 = The SRD bit to set
             tcb[i].srd = 0;
+            // Sets all required SRD bits
             while((tcb[i].srd |= 1) && --nSrd && (tcb[i].srd <<= 1));
             // Put the SRD bits in the correct bit positions
             // Find the offset to the end of the stack space for a thread
@@ -434,4 +434,9 @@ bool createSemaphore(uint8_t semaphore, uint8_t count)
 // by calling scheduler, setting PSP, ASP bit, and PC
 void startRtos()
 {
+    int taskCurrent = rtosScheduler();
+    setPsp((uint32_t)tcb[taskCurrent].sp);
+    setPspMode();
+    _fn fn = (_fn)tcb[taskCurrent].pid;
+    fn();
 }

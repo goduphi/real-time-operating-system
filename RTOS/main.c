@@ -20,6 +20,12 @@ void initHw()
     initSystemClockTo40Mhz();
     initLedPb();
 
+    BLUE_LED = 0;
+    RED_LED = 1;
+    GREEN_LED = 1;
+    YELLOW_LED = 1;
+    ORANGE_LED = 1;
+
     // This will be removed later
     initUart0();
 }
@@ -253,6 +259,7 @@ int main(void)
     testFn();
     // shell();
     */
+
     bool ok;
 
     // Initialize hardware
@@ -274,9 +281,9 @@ int main(void)
     */
 
     // Add required idle process at lowest priority
-    ok =  createThread(idle, "Idle", 7, 2048);
+    ok =  createThread(idle, "Idle", 7, 1024);
 
-
+    /*
     // Add other processes
     ok &= createThread(lengthyFn, "LengthyFn", 6, 1024);
     ok &= createThread(flash4Hz, "Flash4Hz", 4, 1024);
@@ -287,6 +294,7 @@ int main(void)
     ok &= createThread(uncooperative, "Uncoop", 6, 1024);
     ok &= createThread(errant, "Errant", 6, 1024);
     ok &= createThread(shell, "Shell", 6, 1024);
+    */
 
     // Start up RTOS
     if (ok)
