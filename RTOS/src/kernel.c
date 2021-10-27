@@ -63,6 +63,16 @@ void disablePrivilegeMode()
     __asm(" MSR CONTROL, R0");
 }
 
+static uint32_t* getMsp()
+{
+    __asm(" MRS R0, MSP");
+}
+
+static uint32_t* getPsp()
+{
+    __asm(" MRS R0, PSP");
+}
+
 void enableExceptionHandler(uint32_t type)
 {
     NVIC_SYS_HND_CTRL_R |= type;
@@ -137,16 +147,6 @@ void enableMPU()
 {
     // NVIC_MPU_CTRL_PRIVDEFEN - Use this for default memory region
     NVIC_MPU_CTRL_R = NVIC_MPU_CTRL_ENABLE;
-}
-
-static uint32_t* getMsp()
-{
-    __asm(" MRS R0, MSP");
-}
-
-static uint32_t* getPsp()
-{
-    __asm(" MRS R0, PSP");
 }
 
 /*
@@ -441,11 +441,18 @@ void startRtos()
     fn();
 }
 
-// This function is a debug function
+#ifdef DEBUG
+
 void infoTcb()
 {
+    if(taskCount == 0)
+    {
+        putsUart0("No tasks to print\n");
+        return;
+    }
+
     uint8_t i = 0;
-    for(; i < MAX_TASKS; i++)
+    for(; i < taskCount; i++)
     {
         putsUart0("\nProcess ");
         putsUart0(tcb[i].name);
@@ -479,3 +486,5 @@ void infoTcb()
         putcUart0('\n');
     }
 }
+
+#endif

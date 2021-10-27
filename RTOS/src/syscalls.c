@@ -16,6 +16,7 @@
 // REQUIRED: modify this function to yield execution back to scheduler using pendsv
 void yield()
 {
+    __asm(" SVC  #1");
 }
 
 // REQUIRED: modify this function to support 1ms system timer

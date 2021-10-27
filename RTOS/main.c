@@ -221,13 +221,7 @@ void important()
 int main(void)
 {
     /*
-    //NVIC_SYS_HND_CTRL_PNDSV
-    // Enable the Memory Management Fault Handler
-    enableExceptionHandler(NVIC_SYS_HND_CTRL_USAGE | NVIC_SYS_HND_CTRL_BUS | NVIC_SYS_HND_CTRL_MEM);
-
-    setPsp((uint32_t)&ThreadStack[N]);
-    setPspMode();
-
+    // MPU Test
     enableBackgroundRegionRule();
     enableFlashRule();
 
@@ -264,6 +258,10 @@ int main(void)
 
     // Initialize hardware
     initHw();
+
+    // Enable the Memory Management Fault Handler
+    enableExceptionHandler(NVIC_SYS_HND_CTRL_USAGE | NVIC_SYS_HND_CTRL_BUS | NVIC_SYS_HND_CTRL_MEM);
+
     initRtos();
 
     // Power-up flash

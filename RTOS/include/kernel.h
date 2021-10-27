@@ -74,6 +74,8 @@ struct _tcb
 
 #define SIZE_8KIB           0x0000000C      // SIZE = 12 in 2^(SIZE + 1) to obtain a 8KiB size
 
+#define DEBUG
+
 // Set the processor to use the Process Stack Pointer for thread mode
 void setPspMode();
 // Set the starting address of the process stack. Make sure to pass in
@@ -99,7 +101,10 @@ void setThreadPriority(_fn fn, uint8_t priority);
 bool createSemaphore(uint8_t semaphore, uint8_t count);
 void startRtos();
 
-// Debug functions
+#ifdef DEBUG
+
 void infoTcb();
+
+#endif
 
 #endif /* INCLUDE_KERNEL_H_ */

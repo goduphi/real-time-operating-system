@@ -61,6 +61,7 @@ extern void PendSVISR();
 extern void BusFaultHandler();
 extern void UsageFaultHandler();
 extern void FaultISR();
+extern void svCallIsr();
 
 //*****************************************************************************
 //
@@ -84,7 +85,7 @@ void (* const g_pfnVectors[])(void) =
     0,                                      // Reserved
     0,                                      // Reserved
     0,                                      // Reserved
-    IntDefaultHandler,                      // SVCall handler
+    svCallIsr,                              // SVCall handler
     IntDefaultHandler,                      // Debug monitor handler
     0,                                      // Reserved
     PendSVISR,                              // The PendSV handler
