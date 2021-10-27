@@ -391,7 +391,9 @@ bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackByt
             tcb[i].srd = 0;
             while((tcb[i].srd |= 1) && --nSrd && (tcb[i].srd <<= 1));
             // Put the SRD bits in the correct bit positions
-            tcb[i].srd <<= ((uint32_t)tcb[i].spInit - tmp) / 0x400;
+            // Find the offset to the end of the stack space for a thread
+            // That is where the SRD bit for that thread begins
+            tcb[i].srd <<= ((uint32_t)tcb[i].spInit - stackBytes) / 0x400;
             stringCopy(name, tcb[i].name);
             // increment task count
             taskCount++;
