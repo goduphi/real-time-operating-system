@@ -440,3 +440,42 @@ void startRtos()
     _fn fn = (_fn)tcb[taskCurrent].pid;
     fn();
 }
+
+// This function is a debug function
+void infoTcb()
+{
+    uint8_t i = 0;
+    for(; i < MAX_TASKS; i++)
+    {
+        putsUart0("\nProcess ");
+        putsUart0(tcb[i].name);
+        putsUart0(" is ");
+        switch(tcb[i].state)
+        {
+        case STATE_INVALID:
+            putsUart0("INVALID\n");
+            break;
+        case STATE_UNRUN:
+            putsUart0("UNRUN\n");
+            break;
+        case STATE_READY:
+            putsUart0("READY\n");
+            break;
+        }
+        putsUart0("PID:        ");
+        printUint32InHex((uint32_t)tcb[i].pid);
+        putcUart0('\n');
+        putsUart0("SP Initial: ");
+        printUint32InHex((uint32_t)tcb[i].spInit);
+        putcUart0('\n');
+        putsUart0("SP:         ");
+        printUint32InHex((uint32_t)tcb[i].sp);
+        putcUart0('\n');
+        putsUart0("Priority:   ");
+        printUint8InDecimal(tcb[i].priority);
+        putcUart0('\n');
+        putsUart0("SRD:        ");
+        printUint32InBinary(tcb[i].srd);
+        putcUart0('\n');
+    }
+}

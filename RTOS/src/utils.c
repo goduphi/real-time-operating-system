@@ -74,3 +74,19 @@ void printUint32InHex(uint32_t n)
     printUint8InHex((n >> 8) & 0xFF);
     printUint8InHex(n & 0xFF);
 }
+
+void printUint32InBinary(uint32_t n)
+{
+    uint32_t i = 0x80000000;
+    putsUart0("0b");
+    while(i)
+    {
+        putcUart0((n & i) ? '1' : '0');
+        i >>= 1;
+    }
+}
+
+int mSprinf(const char * buffer, const char * format, ...)
+{
+    return -1;
+}

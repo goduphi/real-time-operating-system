@@ -99,4 +99,7 @@ void setThreadPriority(_fn fn, uint8_t priority);
 bool createSemaphore(uint8_t semaphore, uint8_t count);
 void startRtos();
 
+// Debug functions
+void infoTcb();
+
 #endif /* INCLUDE_KERNEL_H_ */

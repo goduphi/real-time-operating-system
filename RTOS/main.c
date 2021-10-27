@@ -272,29 +272,27 @@ int main(void)
     GREEN_LED = 0;
     waitMicrosecond(250000);
 
-    /*
     // Initialize semaphores
     createSemaphore(keyPressed, 1);
     createSemaphore(keyReleased, 0);
     createSemaphore(flashReq, 5);
     createSemaphore(resource, 1);
-    */
 
     // Add required idle process at lowest priority
     ok =  createThread(idle, "Idle", 7, 1024);
 
-    /*
     // Add other processes
-    ok &= createThread(lengthyFn, "LengthyFn", 6, 1024);
+    ok &= createThread(lengthyFn, "LengthyFn", 6, 3000);
     ok &= createThread(flash4Hz, "Flash4Hz", 4, 1024);
-    ok &= createThread(oneshot, "OneShot", 2, 1024);
-    ok &= createThread(readKeys, "ReadKeys", 6, 1024);
+    ok &= createThread(oneshot, "OneShot", 2, 1900);
+    ok &= createThread(readKeys, "ReadKeys", 6, 2500);
     ok &= createThread(debounce, "Debounce", 6, 1024);
     ok &= createThread(important, "Important", 0, 1024);
-    ok &= createThread(uncooperative, "Uncoop", 6, 1024);
+    ok &= createThread(uncooperative, "Uncoop", 6, 4000);
     ok &= createThread(errant, "Errant", 6, 1024);
     ok &= createThread(shell, "Shell", 6, 1024);
-    */
+
+    infoTcb();
 
     // Start up RTOS
     if (ok)
@@ -303,6 +301,4 @@ int main(void)
         RED_LED = 1;
 
     return 0;
-
-
 }
