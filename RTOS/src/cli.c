@@ -158,7 +158,6 @@ void shell(void)
 {
     initUart0();
     setUart0BaudRate(115200, 40e6);
-    initLed();
 
     USER_DATA data;
 

@@ -12,6 +12,20 @@
 #include "kernel.h"
 #include "uart0.h"
 #include "utils.h"
+#include "tString.h"
+
+#define SRAM_BASE   0x20000000
+
+/*
+ * Global Variables
+ */
+
+// The first 4KiB will be used by the OS. All other threads will get stack space
+// starting at 0x20001400
+uint32_t* heap = (uint32_t*)0x20001400;
+
+uint8_t taskCurrent = 0;   // index of last dispatched task
+uint8_t taskCount = 0;     // total number of valid tasks
 
 /*
  * Set's the threads to be run using PSP. By default, threads make use of the MSP,
@@ -135,12 +149,31 @@ static uint32_t* getPsp()
     __asm(" MRS R0, PSP");
 }
 
+/*
+ * Interrupt Service Routines
+ */
+
+// REQUIRED: modify this function to add support for the system timer
+// REQUIRED: in preemptive code, add code to request task switch
+void systickIsr()
+{
+}
+
+// REQUIRED: modify this function to add support for the service call
+// REQUIRED: in preemptive code, add code to handle synchronization primitives
+void svCallIsr()
+{
+}
+
 void MPUFaultHandler()
 {
-    putsUart0("\n\nMPU fault in process N\n\n");
+    putsUart0("\nMPU fault in process N\n");
 
     uint32_t* msp = getMsp();
     uint32_t* psp = getPsp();
+
+    // Causes Hard Fault
+    // GPIO_PORTE_DATA_R |= 2;
 
     // Print MSP and PSP
     putsUart0("\n MSP = 0x");
@@ -207,7 +240,7 @@ void MPUFaultHandler()
 
 void PendSVISR()
 {
-    putsUart0("\n\nPendSVIsr in process N\n\n");
+    putsUart0("\nPendSVIsr in process N\n");
 
     // Check if it's an instruction error or a data error
     if(NVIC_FAULT_STAT_R & NVIC_FAULT_STAT_IERR)
@@ -234,7 +267,7 @@ void PendSVISR()
 
 void BusFaultHandler()
 {
-    putsUart0("\n\nBus fault in process N\n\n");
+    putsUart0("\nBus fault in process N\n");
     //
     // Enter an infinite loop.
     //
@@ -245,7 +278,7 @@ void BusFaultHandler()
 
 void UsageFaultHandler()
 {
-    putsUart0("\n\nUsage fault in process N\n\n");
+    putsUart0("\nUsage fault in process N\n");
 
     //
     // Enter an infinite loop.
@@ -257,7 +290,7 @@ void UsageFaultHandler()
 
 void FaultISR()
 {
-    putsUart0("\n\nHard fault in process N\n\n");
+    putsUart0("\nHard fault in process N\n");
 
     uint32_t* msp = getMsp();
     uint32_t* psp = getPsp();
@@ -271,8 +304,8 @@ void FaultISR()
     printUint32InHex((uint32_t)psp);
     putcUart0('\n');
 
-    putsUart0("mFault Flags = 0x");
-    printUint32InHex(NVIC_FAULT_STAT_R & 0xFF);
+    putsUart0("Hard Fault Flags = 0x");
+    printUint32InHex(NVIC_HFAULT_STAT_R);
     putcUart0('\n');
 
     //
@@ -281,4 +314,122 @@ void FaultISR()
     while(1)
     {
     }
+}
+
+/*
+ * RTOS subroutines
+ */
+
+// REQUIRED: initialize systick for 1ms system timer
+void initRtos()
+{
+    uint8_t i;
+    // no tasks running
+    taskCount = 0;
+    // clear out tcb records
+    for (i = 0; i < MAX_TASKS; i++)
+    {
+        tcb[i].state = STATE_INVALID;
+        tcb[i].pid = 0;
+    }
+}
+
+// REQUIRED: Implement prioritization to 8 levels
+int rtosScheduler()
+{
+    bool ok;
+    static uint8_t task = 0xFF;
+    ok = false;
+    while (!ok)
+    {
+        task++;
+        if (task >= MAX_TASKS)
+            task = 0;
+        ok = (tcb[task].state == STATE_READY || tcb[task].state == STATE_UNRUN);
+    }
+    return task;
+}
+
+bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackBytes)
+{
+    bool ok = false;
+    uint8_t i = 0;
+    bool found = false;
+    // REQUIRED:
+    // store the thread name
+    // allocate stack space and store top of stack in sp and spInit
+    // add task if room in task list
+    if (taskCount < MAX_TASKS)
+    {
+        // make sure fn not already in list (prevent reentrancy)
+        while (!found && (i < MAX_TASKS))
+        {
+            found = (tcb[i++].pid == fn);
+        }
+        if (!found)
+        {
+            // find first available tcb record
+            i = 0;
+            while (tcb[i].state != STATE_INVALID) { i++; }
+            tcb[i].state = STATE_UNRUN;
+            tcb[i].pid = fn;
+            // During creation, the current stack pointer == the initial stack pointer
+            // We need to know how many 1KiB blocks we need. We can get it from the number of SRD bits.
+            // Number of SRD bits = stackBytes / 1KiB = ((stackBytes - 1) / 1024) + 1
+            uint8_t nSrd = ((stackBytes - 1) / 0x400) + 1;
+            // If it is the first task, the base is just the heap
+            // Otherwise, get the previous sp and treat that as the base
+            // tmp currently stores the base address to use
+            uint32_t tmp = (i == 0) ? (uint32_t)heap : (uint32_t)tcb[i - 1].spInit;
+            // Base + (Number of 1KiB blocks * 1KiB)
+            tcb[i].sp = (void*)(tmp + (nSrd * 0x400));
+            tcb[i].spInit = (void*)(tmp + (nSrd * 0x400));
+            // Save the number of SRD bits
+            tmp = nSrd;
+            tcb[i].priority = priority;
+            // Start Address - Base / 1024 = The SRD bit to set
+            tcb[i].srd = 0;
+            while((tcb[i].srd |= 1) && --nSrd && (tcb[i].srd <<= 1));
+            // Put the SRD bits in the correct bit positions
+            tcb[i].srd <<= ((uint32_t)tcb[i].spInit - tmp) / 0x400;
+            stringCopy(name, tcb[i].name);
+            // increment task count
+            taskCount++;
+            ok = true;
+        }
+    }
+    // REQUIRED: allow tasks switches again
+    return ok;
+}
+
+// REQUIRED: modify this function to restart a thread
+void restartThread(_fn fn)
+{
+}
+
+// REQUIRED: modify this function to destroy a thread
+// REQUIRED: remove any pending semaphore waiting
+// NOTE: see notes in class for strategies on whether stack is freed or not
+void destroyThread(_fn fn)
+{
+}
+
+// REQUIRED: modify this function to set a thread priority
+void setThreadPriority(_fn fn, uint8_t priority)
+{
+}
+
+bool createSemaphore(uint8_t semaphore, uint8_t count)
+{
+    bool ok = (semaphore < MAX_SEMAPHORES);
+    {
+        semaphores[semaphore].count = count;
+    }
+    return ok;
+}
+
+// REQUIRED: modify this function to start the operating system
+// by calling scheduler, setting PSP, ASP bit, and PC
+void startRtos()
+{
 }

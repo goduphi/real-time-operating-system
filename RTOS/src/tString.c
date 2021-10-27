@@ -20,3 +20,11 @@ bool stringCompare(const char string1[], const char string2[], uint8_t size)
     }
     return !string1[index] && !string2[index];
 }
+
+// Prone to buffer overrun
+void stringCopy(const char src[], char dest[])
+{
+    uint32_t i = 0;
+    for(; src[i] && dest[i]; i++)
+        dest[i] = src[i];
+}

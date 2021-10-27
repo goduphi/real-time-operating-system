@@ -13,11 +13,82 @@
 
 #include <stdio.h>  // This will be removed from the future version as it takes 4096 Bytes of stack space to call
 
-// To be removed later
-void initLed()
+// REQUIRED: modify this function to yield execution back to scheduler using pendsv
+void yield()
 {
+}
+
+// REQUIRED: modify this function to support 1ms system timer
+// execution yielded back to scheduler until time elapses using pendsv
+void sleep(uint32_t tick)
+{
+}
+
+// REQUIRED: modify this function to wait a semaphore using pendsv
+void wait(int8_t semaphore)
+{
+}
+
+// REQUIRED: modify this function to signal a semaphore is available using pendsv
+void post(int8_t semaphore)
+{
+}
+
+// To be removed later
+void initLedPb()
+{
+    enablePort(PORTA);
+    enablePort(PORTB);
+    enablePort(PORTC);
+    enablePort(PORTD);
+    enablePort(PORTE);
     enablePort(PORTF);
-    selectPinPushPullOutput(PORTF, 1);
+
+    // PB2 is connected to the anode of the LED's
+    selectPinPushPullOutput(PORTB, 2);
+    setPinValue(PORTB, 2, 1);
+
+    selectPinPushPullOutput(PORTA, 2);
+    selectPinPushPullOutput(PORTA, 3);
+    selectPinPushPullOutput(PORTA, 4);
+    selectPinPushPullOutput(PORTE, 0);
+    selectPinPushPullOutput(PORTF, 2);
+
+    setPinCommitControl(PORTD, 7);
+
+    // Configure all the push buttons pins to be inputs
+    selectPinDigitalInput(PORTC, 4);
+    selectPinDigitalInput(PORTC, 5);
+    selectPinDigitalInput(PORTC, 6);
+    selectPinDigitalInput(PORTC, 7);
+    selectPinDigitalInput(PORTD, 6);
+    selectPinDigitalInput(PORTD, 7);
+
+    // Configure pull-ups for all the push buttons
+    enablePinPullup(PORTC, 4);
+    enablePinPullup(PORTC, 5);
+    enablePinPullup(PORTC, 6);
+    enablePinPullup(PORTC, 7);
+    enablePinPullup(PORTD, 6);
+    enablePinPullup(PORTD, 7);
+}
+
+uint8_t readPbs()
+{
+    uint8_t sum = 0;
+    if(!getPinValue(PORTC, 4))
+        sum += 1;
+    if(!getPinValue(PORTC, 5))
+        sum += 2;
+    if(!getPinValue(PORTC, 6))
+        sum += 4;
+    if(!getPinValue(PORTC, 7))
+        sum += 8;
+    if(!getPinValue(PORTD, 6))
+        sum += 16;
+    if(!getPinValue(PORTD, 7))
+        sum += 32;
+    return sum;
 }
 
 void rebootSystem()
