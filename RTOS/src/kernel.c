@@ -16,6 +16,9 @@
 
 #define SRAM_BASE   0x20000000
 
+extern void pushR4ToR11Psp();
+extern void popR4ToR11Psp();
+
 /*
  * Global Variables
  */
@@ -163,6 +166,8 @@ void systickIsr()
 // REQUIRED: in preemptive code, add code to handle synchronization primitives
 void svCallIsr()
 {
+    // Trigger a PendSV ISR call
+    NVIC_INT_CTRL_R |= NVIC_INT_CTRL_PEND_SV;
 }
 
 void MPUFaultHandler()
@@ -257,12 +262,33 @@ void PendSVISR()
         putsUart0("DERR, called from MPU\n\n");
     }
 
-    //
-    // Enter an infinite loop.
-    //
-    while(1)
+    // Save the context of the current task
+    // Push R4 - R11
+    // When a function gets called, it's understood that the function is free
+    // to use R0 - R3, the flags register, etc.
+
+    /*
+    uint8_t i = 0;
+    uint32_t* psp = getPsp();
+    uint32_t* p = (uint32_t*)((uint32_t)psp - 0x20);
+    for(i = 0; i < 8; i++)
     {
+        printUint32InHex(*(p + i));
+        putcUart0('\n');
     }
+    */
+
+    pushR4ToR11Psp();
+
+    // Save the PSP into the tcb
+    tcb[taskCurrent].sp = (void*)getPsp();
+    // Get a new task to run
+    taskCurrent = (uint8_t)rtosScheduler();
+    // Put into PSP the task current to switch task
+    setPsp((uint32_t)tcb[taskCurrent].sp);
+
+    // Pop R4 - R11
+    popR4ToR11Psp();
 }
 
 void BusFaultHandler()
@@ -434,7 +460,7 @@ bool createSemaphore(uint8_t semaphore, uint8_t count)
 // by calling scheduler, setting PSP, ASP bit, and PC
 void startRtos()
 {
-    int taskCurrent = rtosScheduler();
+    taskCurrent = (uint8_t)rtosScheduler();
     setPsp((uint32_t)tcb[taskCurrent].sp);
     setPspMode();
     _fn fn = (_fn)tcb[taskCurrent].pid;
@@ -469,6 +495,7 @@ void infoTcb()
             putsUart0("READY\n");
             break;
         }
+
         putsUart0("PID:        ");
         printUint32InHex((uint32_t)tcb[i].pid);
         putcUart0('\n');

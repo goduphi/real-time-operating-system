@@ -20,6 +20,7 @@ void initHw()
     initSystemClockTo40Mhz();
     initLedPb();
 
+    // Turn off all the LEDs
     BLUE_LED = 0;
     RED_LED = 1;
     GREEN_LED = 1;
@@ -74,9 +75,19 @@ void idle()
 {
     while(true)
     {
-        ORANGE_LED = 1;
-        waitMicrosecond(1000);
+        /*
+        __asm(" MOV R4, #69");
+        __asm(" MOV R5, #0x19");
+        __asm(" MOV R6, #0x12");
+        __asm(" MOV R7, #0x96");
+        __asm(" MOV R8, #69");
+        __asm(" MOV R9, #0x69");
+        __asm(" MOV R10, #69");
+        __asm(" MOV R11, #0x277");
+        */
         ORANGE_LED = 0;
+        waitMicrosecond(1000);
+        ORANGE_LED = 1;
         yield();
     }
 }
@@ -265,9 +276,9 @@ int main(void)
     initRtos();
 
     // Power-up flash
-    GREEN_LED = 1;
-    waitMicrosecond(250000);
     GREEN_LED = 0;
+    waitMicrosecond(250000);
+    GREEN_LED = 1;
     waitMicrosecond(250000);
 
     // Initialize semaphores
@@ -278,7 +289,7 @@ int main(void)
 
     // Add required idle process at lowest priority
     ok =  createThread(idle, "Idle", 7, 1024);
-
+    /*
     // Add other processes
     ok &= createThread(lengthyFn, "LengthyFn", 6, 3000);
     ok &= createThread(flash4Hz, "Flash4Hz", 4, 1024);
@@ -289,7 +300,7 @@ int main(void)
     ok &= createThread(uncooperative, "Uncoop", 6, 4000);
     ok &= createThread(errant, "Errant", 6, 1024);
     ok &= createThread(shell, "Shell", 6, 1024);
-
+    */
     infoTcb();
 
     // Start up RTOS
