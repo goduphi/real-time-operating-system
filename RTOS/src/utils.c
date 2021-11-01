@@ -85,8 +85,3 @@ void printUint32InBinary(uint32_t n)
         i >>= 1;
     }
 }
-
-int mSprinf(const char * buffer, const char * format, ...)
-{
-    return -1;
-}

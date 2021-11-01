@@ -18,6 +18,7 @@
 
 extern void pushR4ToR11Psp();
 extern void popR4ToR11Psp();
+extern void pushPsp(uint32_t r0);
 
 /*
  * Global Variables
@@ -243,6 +244,11 @@ void MPUFaultHandler()
     NVIC_INT_CTRL_R |= NVIC_INT_CTRL_PEND_SV;
 }
 
+void printR4ToR11()
+{
+
+}
+
 void PendSVISR()
 {
     putsUart0("\nPendSVIsr in process N\n");
@@ -266,7 +272,6 @@ void PendSVISR()
     // Push R4 - R11
     // When a function gets called, it's understood that the function is free
     // to use R0 - R3, the flags register, etc.
-
     /*
     uint8_t i = 0;
     uint32_t* psp = getPsp();
@@ -284,11 +289,34 @@ void PendSVISR()
     tcb[taskCurrent].sp = (void*)getPsp();
     // Get a new task to run
     taskCurrent = (uint8_t)rtosScheduler();
-    // Put into PSP the task current to switch task
-    setPsp((uint32_t)tcb[taskCurrent].sp);
+    if(tcb[taskCurrent].state == STATE_READY)
+    {
+        // Put into PSP the task current to switch task
+        setPsp((uint32_t)tcb[taskCurrent].sp);
 
-    // Pop R4 - R11
-    popR4ToR11Psp();
+        // Pop R4 - R11
+        popR4ToR11Psp();
+    }
+    // The current state of the task is unrun
+    else
+    {
+        // If the task is Unrun, change the state to ready
+        tcb[taskCurrent].state = STATE_READY;
+        // Put into PSP the task current to switch task
+        setPsp((uint32_t)tcb[taskCurrent].spInit);
+        // Push the values of xPSR - R0 on the stack because hardware will pop it automatically
+        // We want to push the values corresponding to the task we want to run
+        pushPsp(0x61000000);                        // xPSR
+        pushPsp((uint32_t)tcb[taskCurrent].pid);    // PC
+        // This value is very important
+        // INSERT COMMENT ON HOW LR works. Section 2.5
+        pushPsp(0xFFFFFFFD);                        // LR
+        pushPsp(0x00);                              // R12
+        pushPsp(0x00);                              // R3
+        pushPsp(0x00);                              // R2
+        pushPsp(0x00);                              // R1
+        pushPsp(0x00);                              // R0
+    }
 }
 
 void BusFaultHandler()
@@ -464,6 +492,8 @@ void startRtos()
     setPsp((uint32_t)tcb[taskCurrent].sp);
     setPspMode();
     _fn fn = (_fn)tcb[taskCurrent].pid;
+    // Mark the task as ready because we are going to run it
+    tcb[taskCurrent].state = STATE_READY;
     fn();
 }
 

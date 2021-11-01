@@ -92,6 +92,39 @@ void idle()
     }
 }
 
+void idle2()
+{
+    while(true)
+    {
+        BLUE_LED = 1;
+        waitMicrosecond(1000);
+        BLUE_LED = 0;
+        yield();
+    }
+}
+
+void idle3()
+{
+    while(true)
+    {
+        YELLOW_LED = 0;
+        waitMicrosecond(1000);
+        YELLOW_LED = 1;
+        yield();
+    }
+}
+
+void idle4()
+{
+    while(true)
+    {
+        GREEN_LED = 0;
+        waitMicrosecond(1000);
+        GREEN_LED = 1;
+        yield();
+    }
+}
+
 void flash4Hz()
 {
     while(true)
@@ -288,7 +321,10 @@ int main(void)
     createSemaphore(resource, 1);
 
     // Add required idle process at lowest priority
-    ok =  createThread(idle, "Idle", 7, 1024);
+    ok = createThread(idle, "Idle", 7, 1024);
+    ok &= createThread(idle2, "Idle2", 7, 3000);
+    ok &= createThread(idle3, "Idle3", 7, 1024);
+    ok &= createThread(idle4, "Idle3", 7, 1024);
     /*
     // Add other processes
     ok &= createThread(lengthyFn, "LengthyFn", 6, 3000);

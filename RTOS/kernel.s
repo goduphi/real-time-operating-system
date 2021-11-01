@@ -5,6 +5,7 @@
 
 	.def pushR4ToR11Psp
 	.def popR4ToR11Psp
+	.def pushPsp
 
 .thumb
 
@@ -48,6 +49,13 @@ popR4ToR11Psp:
 	LDR R11, [R0]
 	ADD R0, #4
 	MSR PSP, R0
+	BX LR
+
+pushPsp:
+	MRS R1, PSP
+	SUB R1, #4
+	STR R0, [R1]
+	MSR PSP, R1
 	BX LR
 
 .endm
