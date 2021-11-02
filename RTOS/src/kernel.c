@@ -14,7 +14,8 @@
 #include "utils.h"
 #include "tString.h"
 
-#define SRAM_BASE   0x20000000
+#define SRAM_BASE               0x20000000
+#define EXEC_RETURN_THREAD_MODE 0xFFFFFFFD
 
 extern void pushR4ToR11Psp();
 extern void popR4ToR11Psp();
@@ -297,20 +298,26 @@ void PendSVISR()
         // Pop R4 - R11
         popR4ToR11Psp();
     }
-    // The current state of the task is unrun
+    // Initially, the program is unrun. So, we want to make sure that we change the
+    // state to ready, and jump to that routine. So, manually load in the value for
+    // SP, PC, xPSR, and LR.
     else
     {
-        // If the task is Unrun, change the state to ready
         tcb[taskCurrent].state = STATE_READY;
         // Put into PSP the task current to switch task
+        // The values we push now will be pushed onto this stack
         setPsp((uint32_t)tcb[taskCurrent].spInit);
         // Push the values of xPSR - R0 on the stack because hardware will pop it automatically
         // We want to push the values corresponding to the task we want to run
+        // The value loaded into xPSR is arbitrary for now.
+        // Following the data sheet, bit 24 is the Thumb state bit and should always be set.
         pushPsp(0x61000000);                        // xPSR
+        // We want the new task to run. So, load in the address of where the task is in memory.
         pushPsp((uint32_t)tcb[taskCurrent].pid);    // PC
         // This value is very important
-        // INSERT COMMENT ON HOW LR works. Section 2.5
-        pushPsp(0xFFFFFFFD);                        // LR
+        // The exception mechanism relies on the value loaded into LR
+        // to know when the processor has completed the exception handler.
+        pushPsp(EXEC_RETURN_THREAD_MODE);           // LR
         pushPsp(0x00);                              // R12
         pushPsp(0x00);                              // R3
         pushPsp(0x00);                              // R2
