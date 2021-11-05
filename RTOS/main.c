@@ -78,6 +78,7 @@ void idle()
     while(true)
     {
         /*
+        // Debug code
         __asm(" MOV R4, #69");
         __asm(" MOV R5, #0x19");
         __asm(" MOV R6, #0x12");
@@ -87,6 +88,7 @@ void idle()
         __asm(" MOV R10, #69");
         __asm(" MOV R11, #0x277");
         */
+
         ORANGE_LED = 0;
         waitMicrosecond(1000);
         ORANGE_LED = 1;
@@ -141,9 +143,9 @@ void oneshot()
     while(true)
     {
         wait(flashReq);
-        YELLOW_LED = 1;
-        sleep(1000);
         YELLOW_LED = 0;
+        sleep(1000);
+        YELLOW_LED = 1;
     }
 }
 
@@ -324,15 +326,12 @@ int main(void)
 
     // Add required idle process at lowest priority
     ok = createThread(idle, "Idle", 7, 1024);
-    // ok &= createThread(idle2, "Idle2", 7, 3000);
-    // ok &= createThread(idle3, "Idle3", 7, 1024);
-    // ok &= createThread(idle4, "Idle3", 7, 1024);
 
     // Add other processes
     // ok &= createThread(lengthyFn, "LengthyFn", 6, 3000);
     ok &= createThread(flash4Hz, "Flash4Hz", 4, 1024);
-    /*
     ok &= createThread(oneshot, "OneShot", 2, 1900);
+    /*
     ok &= createThread(readKeys, "ReadKeys", 6, 2500);
     ok &= createThread(debounce, "Debounce", 6, 1024);
     ok &= createThread(important, "Important", 0, 1024);

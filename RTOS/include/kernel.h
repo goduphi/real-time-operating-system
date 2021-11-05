@@ -21,6 +21,7 @@ typedef void (*_fn)();
 // semaphore
 #define MAX_SEMAPHORES 5
 #define MAX_QUEUE_SIZE 5
+
 typedef struct _semaphore
 {
     uint16_t count;
@@ -28,7 +29,6 @@ typedef struct _semaphore
     uint32_t processQueue[MAX_QUEUE_SIZE]; // store task index here
 } semaphore;
 
-semaphore semaphores[MAX_SEMAPHORES];
 #define keyPressed 1
 #define keyReleased 2
 #define flashReq 3

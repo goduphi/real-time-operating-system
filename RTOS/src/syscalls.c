@@ -35,6 +35,7 @@ void wait(int8_t semaphore)
 // REQUIRED: modify this function to signal a semaphore is available using pendsv
 void post(int8_t semaphore)
 {
+    __asm(" SVC  #10");
 }
 
 uint8_t readPbs()

@@ -22,7 +22,7 @@
 
 typedef enum _svcNumber
 {
-    YIELD = 7, SLEEP
+    YIELD = 7, SLEEP, WAIT, POST
 } svcNumber;
 
 extern void pushR4ToR11Psp();
@@ -39,6 +39,8 @@ uint32_t* heap = (uint32_t*)0x20001400;
 
 uint8_t taskCurrent = 0;   // index of last dispatched task
 uint8_t taskCount = 0;     // total number of valid tasks
+
+semaphore semaphores[MAX_SEMAPHORES];
 
 /*
  * Set's the threads to be run using PSP. By default, threads make use of the MSP,
@@ -170,8 +172,12 @@ void enableMPU()
 // REQUIRED: in preemptive code, add code to request task switch
 void systickIsr()
 {
-    // putsUart0("Systick called\n");
     uint8_t i = 0;
+    // Sleep implementation
+    // The Systick Isr is being called @1KHz
+    // So, if a task was delayed it will not get scheduled, decrement the ticks (in ms) until it reaches 0
+    // Until ticks reaches 0, the task will be sleeping (not get scheduled). Afterwards, we change it to ready,
+    // so that it does get scheduled.
     for(; i < taskCount; i++)
         if(tcb[i].state == STATE_DELAYED)
         {
@@ -213,6 +219,22 @@ void svCallIsr()
         tcb[taskCurrent].state = STATE_DELAYED;
         // Trigger a PendSV ISR call
         NVIC_INT_CTRL_R |= NVIC_INT_CTRL_PEND_SV;
+        break;
+    // As long as the semaphore count is greater than 0, the task will be scheduled,
+    // otherwise, we want for a post to occur until the task resumes execution.
+    // Store all relevant information about the task semaphore.
+    case WAIT:
+        if(semaphores[*psp].count > 0)
+            semaphores[*psp].count--;
+        else
+        {
+            semaphores[*psp].processQueue[semaphores[*psp].queueSize++] = taskCurrent;
+            // Store a pointer to the semaphore of the current task
+            tcb[taskCurrent].semaphore = (void*)(semaphores + *psp);
+            tcb[taskCurrent].state = STATE_BLOCKED;
+            // Trigger a PendSV ISR call
+            NVIC_INT_CTRL_R |= NVIC_INT_CTRL_PEND_SV;
+        }
         break;
     }
 }
