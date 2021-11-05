@@ -16,13 +16,14 @@
 // REQUIRED: modify this function to yield execution back to scheduler using pendsv
 void yield()
 {
-    __asm(" SVC  #1");
+    __asm(" SVC  #7");
 }
 
 // REQUIRED: modify this function to support 1ms system timer
 // execution yielded back to scheduler until time elapses using pendsv
 void sleep(uint32_t tick)
 {
+    __asm(" SVC  #1");
 }
 
 // REQUIRED: modify this function to wait a semaphore using pendsv

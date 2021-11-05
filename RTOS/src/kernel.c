@@ -14,8 +14,16 @@
 #include "utils.h"
 #include "tString.h"
 
-#define SRAM_BASE               0x20000000
-#define EXEC_RETURN_THREAD_MODE 0xFFFFFFFD
+#define SRAM_BASE                       0x20000000
+#define EXEC_RETURN_THREAD_MODE         0xFFFFFFFD
+#define OFFSET_TO_PC_AFTER_FN_CALLED    6           // Total of 8 registers are pushed automatically when function called.
+                                                    // Offset by 6 4-byte integers.
+#define OFFSET_TO_SVC_INSTRUCTION       2           // This is a 16 bit instruction.
+
+typedef enum _svcNumber
+{
+    YIELD = 7, SLEEP
+} svcNumber;
 
 extern void pushR4ToR11Psp();
 extern void popR4ToR11Psp();
@@ -168,8 +176,31 @@ void systickIsr()
 // REQUIRED: in preemptive code, add code to handle synchronization primitives
 void svCallIsr()
 {
-    // Trigger a PendSV ISR call
-    NVIC_INT_CTRL_R |= NVIC_INT_CTRL_PEND_SV;
+    // Extract the SVC #N
+    // SVC is a 16-bit instruction. PC is pointing to the next instruction to execute after the SVC instruction.
+    // When the ISR is called, 8 registers are automatically push onto the stack.
+
+    // Let's get the PC by adding 6 4-byte registers to PSP as the registers pushed are xPSR, PC, LR, R12, R3 - R0.
+    // Subtract 2 bytes from it go back to the previous instruction ran (2 bytes because SVC is a 16 bit instruction).
+    // ----SVC #N
+    // PC: BX LR
+    // Moving PC back by 2 bytes gets us back to SVC
+    // Cast it to a 16-bit integer pointer because SVC is a 16-bit instruction.
+    uint32_t* psp = getPsp();
+    uint8_t N = *(uint16_t*)(*(psp + OFFSET_TO_PC_AFTER_FN_CALLED) - OFFSET_TO_SVC_INSTRUCTION) & 0xFF;
+    putcUart0(N + '0');
+    switch(N)
+    {
+    case YIELD:
+        // Trigger a PendSV ISR call
+        NVIC_INT_CTRL_R |= NVIC_INT_CTRL_PEND_SV;
+        break;
+    case SLEEP:
+        tcb[taskCurrent].ticks = *psp;          // R0 is the last register push automatically by hardware. PSP points to R0.
+        tcb[taskCurrent].state = STATE_DELAYED;
+        // Trigger a PendSV ISR call
+        break;
+    }
 }
 
 void MPUFaultHandler()
@@ -243,11 +274,6 @@ void MPUFaultHandler()
 
     // Trigger a PendSV ISR call
     NVIC_INT_CTRL_R |= NVIC_INT_CTRL_PEND_SV;
-}
-
-void printR4ToR11()
-{
-
 }
 
 void PendSVISR()
