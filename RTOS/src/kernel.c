@@ -200,8 +200,8 @@ void svCallIsr()
 
     // Let's get the PC by adding 6 4-byte registers to PSP as the registers pushed are xPSR, PC, LR, R12, R3 - R0.
     // Subtract 2 bytes from it go back to the previous instruction ran (2 bytes because SVC is a 16 bit instruction).
-    // ----SVC #N
-    // PC: BX LR
+    // -----SVC #N
+    // PC-> BX LR
     // Moving PC back by 2 bytes gets us back to SVC
     // Cast it to a 16-bit integer pointer because SVC is a 16-bit instruction.
     uint32_t* psp = getPsp();
@@ -380,6 +380,8 @@ void PendSVISR()
         // The exception mechanism relies on the value loaded into LR
         // to know when the processor has completed the exception handler.
         pushPsp(EXEC_RETURN_THREAD_MODE);           // LR
+
+        // Initial values of R0-R3, R12 can be initialized to 0 for my implementation
         pushPsp(0x00);                              // R12
         pushPsp(0x00);                              // R3
         pushPsp(0x00);                              // R2
