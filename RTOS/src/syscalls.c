@@ -23,56 +23,18 @@ void yield()
 // execution yielded back to scheduler until time elapses using pendsv
 void sleep(uint32_t tick)
 {
-    __asm(" SVC  #1");
+    __asm(" SVC  #8");
 }
 
 // REQUIRED: modify this function to wait a semaphore using pendsv
 void wait(int8_t semaphore)
 {
+    __asm(" SVC  #9");
 }
 
 // REQUIRED: modify this function to signal a semaphore is available using pendsv
 void post(int8_t semaphore)
 {
-}
-
-// To be removed later
-void initLedPb()
-{
-    enablePort(PORTA);
-    enablePort(PORTB);
-    enablePort(PORTC);
-    enablePort(PORTD);
-    enablePort(PORTE);
-    enablePort(PORTF);
-
-    // PB2 is connected to the anode of the LED's
-    selectPinPushPullOutput(PORTB, 2);
-    setPinValue(PORTB, 2, 1);
-
-    selectPinPushPullOutput(PORTA, 2);
-    selectPinPushPullOutput(PORTA, 3);
-    selectPinPushPullOutput(PORTA, 4);
-    selectPinPushPullOutput(PORTE, 0);
-    selectPinPushPullOutput(PORTF, 2);
-
-    setPinCommitControl(PORTD, 7);
-
-    // Configure all the push buttons pins to be inputs
-    selectPinDigitalInput(PORTC, 4);
-    selectPinDigitalInput(PORTC, 5);
-    selectPinDigitalInput(PORTC, 6);
-    selectPinDigitalInput(PORTC, 7);
-    selectPinDigitalInput(PORTD, 6);
-    selectPinDigitalInput(PORTD, 7);
-
-    // Configure pull-ups for all the push buttons
-    enablePinPullup(PORTC, 4);
-    enablePinPullup(PORTC, 5);
-    enablePinPullup(PORTC, 6);
-    enablePinPullup(PORTC, 7);
-    enablePinPullup(PORTD, 6);
-    enablePinPullup(PORTD, 7);
 }
 
 uint8_t readPbs()

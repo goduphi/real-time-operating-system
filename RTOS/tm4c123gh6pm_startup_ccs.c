@@ -31,7 +31,6 @@
 //*****************************************************************************
 void ResetISR(void);
 static void NmiSR(void);
-static void FaultISR(void);
 static void IntDefaultHandler(void);
 
 //*****************************************************************************
@@ -62,6 +61,7 @@ extern void BusFaultHandler();
 extern void UsageFaultHandler();
 extern void FaultISR();
 extern void svCallIsr();
+extern void systickIsr();
 
 //*****************************************************************************
 //
@@ -89,7 +89,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // Debug monitor handler
     0,                                      // Reserved
     PendSVISR,                              // The PendSV handler
-    IntDefaultHandler,                      // The SysTick handler
+    systickIsr,                             // The SysTick handler
     IntDefaultHandler,                      // GPIO Port A
     IntDefaultHandler,                      // GPIO Port B
     IntDefaultHandler,                      // GPIO Port C

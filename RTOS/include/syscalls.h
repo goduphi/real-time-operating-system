@@ -16,8 +16,6 @@ void sleep(uint32_t tick);
 void wait(int8_t semaphore);
 void post(int8_t semaphore);
 
-// To be removed later
-void initLedPb();
 uint8_t readPbs();
 
 void rebootSystem();

@@ -170,6 +170,18 @@ void enableMPU()
 // REQUIRED: in preemptive code, add code to request task switch
 void systickIsr()
 {
+    // putsUart0("Systick called\n");
+    uint8_t i = 0;
+    for(; i < taskCount; i++)
+        if(tcb[i].state == STATE_DELAYED)
+        {
+            if(tcb[i].ticks == 0)
+            {
+                tcb[i].state = STATE_READY;
+                return;
+            }
+            tcb[i].ticks--;
+        }
 }
 
 // REQUIRED: modify this function to add support for the service call
@@ -188,7 +200,7 @@ void svCallIsr()
     // Cast it to a 16-bit integer pointer because SVC is a 16-bit instruction.
     uint32_t* psp = getPsp();
     uint8_t N = *(uint16_t*)(*(psp + OFFSET_TO_PC_AFTER_FN_CALLED) - OFFSET_TO_SVC_INSTRUCTION) & 0xFF;
-    putcUart0(N + '0');
+
     switch(N)
     {
     case YIELD:
@@ -197,8 +209,10 @@ void svCallIsr()
         break;
     case SLEEP:
         tcb[taskCurrent].ticks = *psp;          // R0 is the last register push automatically by hardware. PSP points to R0.
+                                                // This will give us access to the first argument passed in for the sleep function.
         tcb[taskCurrent].state = STATE_DELAYED;
         // Trigger a PendSV ISR call
+        NVIC_INT_CTRL_R |= NVIC_INT_CTRL_PEND_SV;
         break;
     }
 }
@@ -278,7 +292,7 @@ void MPUFaultHandler()
 
 void PendSVISR()
 {
-    putsUart0("\nPendSVIsr in process N\n");
+    // putsUart0("\nPendSVIsr in process N\n");
 
     // Check if it's an instruction error or a data error
     if(NVIC_FAULT_STAT_R & NVIC_FAULT_STAT_IERR)

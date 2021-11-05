@@ -7,6 +7,7 @@
 #include "cli.h"
 #include "uart0.h"
 #include "wait.h"
+#include "peripheral.h"
 
 // REQUIRED: correct these bitbanding references for the off-board LEDs
 #define BLUE_LED     (*((volatile uint32_t *)(0x42000000 + (0x400253FC-0x40000000)*32 + 2*4))) // on-board blue LED
@@ -19,6 +20,7 @@ void initHw()
 {
     initSystemClockTo40Mhz();
     initLedPb();
+    initSysTick(SYSTIC_1KHZ);
 
     // Turn off all the LEDs
     BLUE_LED = 0;
@@ -322,13 +324,14 @@ int main(void)
 
     // Add required idle process at lowest priority
     ok = createThread(idle, "Idle", 7, 1024);
-    ok &= createThread(idle2, "Idle2", 7, 3000);
-    ok &= createThread(idle3, "Idle3", 7, 1024);
-    ok &= createThread(idle4, "Idle3", 7, 1024);
-    /*
+    // ok &= createThread(idle2, "Idle2", 7, 3000);
+    // ok &= createThread(idle3, "Idle3", 7, 1024);
+    // ok &= createThread(idle4, "Idle3", 7, 1024);
+
     // Add other processes
-    ok &= createThread(lengthyFn, "LengthyFn", 6, 3000);
+    // ok &= createThread(lengthyFn, "LengthyFn", 6, 3000);
     ok &= createThread(flash4Hz, "Flash4Hz", 4, 1024);
+    /*
     ok &= createThread(oneshot, "OneShot", 2, 1900);
     ok &= createThread(readKeys, "ReadKeys", 6, 2500);
     ok &= createThread(debounce, "Debounce", 6, 1024);
