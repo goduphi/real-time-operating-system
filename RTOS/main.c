@@ -328,10 +328,10 @@ int main(void)
     ok = createThread(idle, "Idle", 7, 1024);
 
     // Add other processes
-    ok &= createThread(lengthyFn, "LengthyFn", 6, 3000);
+    ok &= createThread(lengthyFn, "LengthyFn", 6, 1024);
     ok &= createThread(flash4Hz, "Flash4Hz", 4, 1024);
-    ok &= createThread(oneshot, "OneShot", 2, 1900);
-    ok &= createThread(readKeys, "ReadKeys", 6, 2500);
+    ok &= createThread(oneshot, "OneShot", 2, 1024);
+    ok &= createThread(readKeys, "ReadKeys", 6, 1024);
     ok &= createThread(debounce, "Debounce", 6, 1024);
     ok &= createThread(important, "Important", 0, 1024);
     ok &= createThread(uncooperative, "Uncoop", 6, 1024);
@@ -339,7 +339,10 @@ int main(void)
     ok &= createThread(errant, "Errant", 6, 1024);
     ok &= createThread(shell, "Shell", 6, 1024);
     */
+
+#ifdef DEBUG
     infoTcb();
+#endif
 
     // Start up RTOS
     if (ok)
