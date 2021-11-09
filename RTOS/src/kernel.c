@@ -220,6 +220,9 @@ void svCallIsr()
         // Trigger a PendSV ISR call
         NVIC_INT_CTRL_R |= NVIC_INT_CTRL_PEND_SV;
         break;
+
+    // IMPORTANT: *psp represents r0 for both wait and post. It is the semaphore index
+
     // As long as the semaphore count is greater than 0, the task will be scheduled,
     // otherwise, we want for a post to occur until the task resumes execution.
     // Store all relevant information about the task semaphore.
@@ -234,6 +237,23 @@ void svCallIsr()
             tcb[taskCurrent].state = STATE_BLOCKED;
             // Trigger a PendSV ISR call
             NVIC_INT_CTRL_R |= NVIC_INT_CTRL_PEND_SV;
+        }
+        break;
+    case POST:
+        // Increment the count for the selected semaphore
+        semaphores[*psp].count++;
+        // If the current count of the semaphore is 1, then it suggests that a task is waiting in
+        // the queue to be waken up.
+        if(semaphores[*psp].count == 1 && semaphores[*psp].queueSize > 0)
+        {
+            uint8_t currentTaskInSemaphoreQueue = semaphores[*psp].processQueue[0];
+            semaphores[*psp].count--;
+            tcb[currentTaskInSemaphoreQueue].state = STATE_READY;
+            // Delete the task from the semaphore queue
+            uint8_t i = 0;
+            for(; i < semaphores[*psp].queueSize - 1; i++)
+                semaphores[*psp].processQueue[i] = semaphores[*psp].processQueue[i + 1];
+            semaphores[*psp].queueSize--;
         }
         break;
     }
@@ -314,7 +334,9 @@ void MPUFaultHandler()
 
 void PendSVISR()
 {
-    // putsUart0("\nPendSVIsr in process N\n");
+    // Un-commenting the next two lines causes flash4Hz to run slower
+    // putsUart0("\nCurrent PID: ");
+    // printUint32InHex((uint32_t)tcb[taskCurrent].pid);
 
     // Check if it's an instruction error or a data error
     if(NVIC_FAULT_STAT_R & NVIC_FAULT_STAT_IERR)

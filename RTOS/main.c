@@ -188,12 +188,12 @@ void readKeys()
         if ((buttons & 1) != 0)
         {
             YELLOW_LED ^= 1;
-            RED_LED = 1;
+            RED_LED = 0;
         }
         if ((buttons & 2) != 0)
         {
             post(flashReq);
-            RED_LED = 0;
+            RED_LED = 1;
         }
         if ((buttons & 4) != 0)
         {
@@ -328,14 +328,14 @@ int main(void)
     ok = createThread(idle, "Idle", 7, 1024);
 
     // Add other processes
-    // ok &= createThread(lengthyFn, "LengthyFn", 6, 3000);
+    ok &= createThread(lengthyFn, "LengthyFn", 6, 3000);
     ok &= createThread(flash4Hz, "Flash4Hz", 4, 1024);
     ok &= createThread(oneshot, "OneShot", 2, 1900);
-    /*
     ok &= createThread(readKeys, "ReadKeys", 6, 2500);
     ok &= createThread(debounce, "Debounce", 6, 1024);
     ok &= createThread(important, "Important", 0, 1024);
-    ok &= createThread(uncooperative, "Uncoop", 6, 4000);
+    ok &= createThread(uncooperative, "Uncoop", 6, 1024);
+    /*
     ok &= createThread(errant, "Errant", 6, 1024);
     ok &= createThread(shell, "Shell", 6, 1024);
     */
@@ -345,7 +345,7 @@ int main(void)
     if (ok)
         startRtos(); // never returns
     else
-        RED_LED = 1;
+        RED_LED = 0;
 
     return 0;
 }
