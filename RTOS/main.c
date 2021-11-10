@@ -335,12 +335,10 @@ int main(void)
     ok &= createThread(debounce, "Debounce", 6, 1024);
     ok &= createThread(important, "Important", 0, 1024);
     ok &= createThread(uncooperative, "Uncoop", 6, 1024);
-    /*
     ok &= createThread(errant, "Errant", 6, 1024);
-    ok &= createThread(shell, "Shell", 6, 1024);
-    */
+    // ok &= createThread(shell, "Shell", 6, 1024);
 
-    // Loads up the task indices in order of priority
+    // Loads up the task indices from the tcb in order of priority
     initTaskNextPriorities();
 
 #ifdef DEBUG

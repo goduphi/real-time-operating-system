@@ -501,6 +501,7 @@ int rtosScheduler()
 
 /*
  * The priority scheduler will use the concept of levels to find out which task to schedule the task.
+ * The idea is to create a table with all the task indices with decreasing priorities.
  */
 
 int8_t priNextTask[MAX_TASKS];
@@ -515,7 +516,7 @@ void initTaskNextPriorities()
     uint8_t j = 0;
     // The max priority level is 7
     for(priority = 0; priority <= 7; priority++)
-        for(j = 0; j < taskCount; j++)
+        for(j = 0; j < taskCount && j < MAX_TASKS; j++)
             if(tcb[j].priority == priority)
                 priNextTask[level++] = j;
     level = 0;
@@ -526,7 +527,7 @@ int priorityRtosScheduler()
     bool ok = false;
     while(!ok)
     {
-        if(level == taskCount)
+        if(level >= taskCount)
             level = 0;
         ok = (tcb[priNextTask[level]].state == STATE_READY || tcb[priNextTask[level]].state == STATE_UNRUN);
         level++;
