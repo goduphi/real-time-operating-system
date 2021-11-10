@@ -373,7 +373,7 @@ void PendSVISR()
     // Save the PSP into the tcb
     tcb[taskCurrent].sp = (void*)getPsp();
     // Get a new task to run
-    taskCurrent = (uint8_t)rtosScheduler();
+    taskCurrent = (uint8_t)priorityRtosScheduler();
     if(tcb[taskCurrent].state == STATE_READY)
     {
         // Put into PSP the task current to switch task
@@ -481,6 +481,8 @@ void initRtos()
     }
 }
 
+// Schedulers!!!
+
 // REQUIRED: Implement prioritization to 8 levels
 int rtosScheduler()
 {
@@ -495,6 +497,41 @@ int rtosScheduler()
         ok = (tcb[task].state == STATE_READY || tcb[task].state == STATE_UNRUN);
     }
     return task;
+}
+
+/*
+ * The priority scheduler will use the concept of levels to find out which task to schedule the task.
+ */
+
+int8_t priNextTask[MAX_TASKS];
+uint8_t level = 0;
+
+void initTaskNextPriorities()
+{
+    for(level = 0; level < MAX_TASKS; level++)
+        priNextTask[level] = -1;
+    level = 0;
+    int8_t priority = 0;
+    uint8_t j = 0;
+    // The max priority level is 7
+    for(priority = 0; priority <= 7; priority++)
+        for(j = 0; j < taskCount; j++)
+            if(tcb[j].priority == priority)
+                priNextTask[level++] = j;
+    level = 0;
+}
+
+int priorityRtosScheduler()
+{
+    bool ok = false;
+    while(!ok)
+    {
+        if(level == taskCount)
+            level = 0;
+        ok = (tcb[priNextTask[level]].state == STATE_READY || tcb[priNextTask[level]].state == STATE_UNRUN);
+        level++;
+    }
+    return priNextTask[level - 1];
 }
 
 bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackBytes)
@@ -581,7 +618,7 @@ bool createSemaphore(uint8_t semaphore, uint8_t count)
 // by calling scheduler, setting PSP, ASP bit, and PC
 void startRtos()
 {
-    taskCurrent = (uint8_t)rtosScheduler();
+    taskCurrent = (uint8_t)priorityRtosScheduler();
     setPsp((uint32_t)tcb[taskCurrent].sp);
     setPspMode();
     _fn fn = (_fn)tcb[taskCurrent].pid;

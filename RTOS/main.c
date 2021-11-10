@@ -340,6 +340,9 @@ int main(void)
     ok &= createThread(shell, "Shell", 6, 1024);
     */
 
+    // Loads up the task indices in order of priority
+    initTaskNextPriorities();
+
 #ifdef DEBUG
     infoTcb();
 #endif

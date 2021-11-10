@@ -94,6 +94,8 @@ void enableMPU();
 
 void initRtos();
 int rtosScheduler();
+int priorityRtosScheduler();
+void initTaskNextPriorities();
 bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackBytes);
 void restartThread(_fn fn);
 void destroyThread(_fn fn);
