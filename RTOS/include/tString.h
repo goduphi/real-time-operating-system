@@ -14,5 +14,6 @@
 // Compares to strings to see if they are equal or not
 bool stringCompare(const char string1[], const char string2[], uint8_t size);
 void stringCopy(const char src[], char dest[]);
+uint32_t strLen(const char* str);
 
 #endif /* INCLUDE_TSTRING_H_ */

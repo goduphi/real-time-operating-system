@@ -40,6 +40,7 @@ typedef struct _semaphore
 #define STATE_READY      2 // has run, can resume at any time
 #define STATE_DELAYED    3 // has run, but now awaiting timer
 #define STATE_BLOCKED    4 // has run, but now blocked by semaphore
+#define STATE_KILLED     5
 
 #define MAX_TASKS 12       // maximum number of valid tasks
 

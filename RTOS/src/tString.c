@@ -30,3 +30,10 @@ void stringCopy(const char* str1, char* str2)
     str2[i] = '\0';
 }
 
+uint32_t strLen(const char* str)
+{
+    uint32_t len = 0;
+    while(str[len]) len++;
+    return len;
+}
+

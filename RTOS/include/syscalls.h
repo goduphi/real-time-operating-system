@@ -21,7 +21,7 @@ void ps();
 // Displays the inter-process (thread) communication state
 void ipcs();
 // Kills the process (thread) with matching PID
-void kill(int32_t pid);
+void kill(uint32_t pid);
 // Turns priority inheritance on or off
 void pi(bool on);
 // Turns preemption on or off

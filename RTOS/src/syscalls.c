@@ -71,7 +71,7 @@ void pidof(uint32_t* pid, char name[])
 }
 
 // Kills the process (thread) with matching PID
-void kill(int32_t pid)
+void kill(uint32_t pid)
 {
     __asm(" SVC #15");
 }

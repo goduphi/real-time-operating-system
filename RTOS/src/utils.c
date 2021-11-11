@@ -67,6 +67,62 @@ void printUint8InHex(uint8_t n)
     }
 }
 
+// This power function is very limited and not the best implementation
+// Runs in O(b)
+uint32_t power32(uint16_t n, uint8_t b)
+{
+    uint32_t res = 1;
+    for(; b; b--)
+        res *= n;
+    return res;
+}
+
+uint32_t hexStringToUint32(char* n)
+{
+    int8_t len = (uint8_t)strLen(n) - 1, p = 0;
+    uint32_t res = 0;
+    while(len >= 0)
+    {
+        if(n[len] >= '0' && n[len] <= '9')
+            res += (n[len] - '0') * power32(16, p);
+        else if(n[len] >= 'A' && n[len] <= 'F' || n[len] >= 'a' && n[len] <= 'f')
+        {
+            switch(n[len])
+            {
+            case 'A':
+            case 'a':
+                res += 10 * power32(16, p);
+                break;
+            case 'B':
+            case 'b':
+                res += 11 * power32(16, p);
+                break;
+            case 'C':
+            case 'c':
+                res += 12 * power32(16, p);
+                break;
+            case 'D':
+            case 'd':
+                res += 13 * power32(16, p);
+                break;
+            case 'E':
+            case 'e':
+                res += 14 * power32(16, p);
+                break;
+            case 'F':
+            case 'f':
+                res += 15 * power32(16, p);
+                break;
+            }
+        }
+        else
+            break;
+        len--;
+        p++;
+    }
+    return (len < 0) ? res : 0;
+}
+
 void printUint32InHex(uint32_t n)
 {
     printUint8InHex((n >> 24) & 0xFF);

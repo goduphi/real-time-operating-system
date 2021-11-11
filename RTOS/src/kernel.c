@@ -275,10 +275,14 @@ void svCallIsr()
         for(; p < taskCount; p++)
             if(stringCompare(tcb[p].name, taskName, 16))
             {
+                // Validate pid if name found
                 *pid = (uint32_t)tcb[p].pid;
                 break;
             }
         }
+        break;
+    case KILL:
+        destroyThread((_fn)*psp);
         break;
     }
 }
@@ -603,8 +607,6 @@ bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackByt
             // Base + (Number of 1KiB blocks * 1KiB)
             tcb[i].sp = (void*)(tmp + (nSrd * 0x400));
             tcb[i].spInit = (void*)(tmp + (nSrd * 0x400));
-            // Save the number of SRD bits
-            tmp = nSrd;
             tcb[i].priority = priority;
             tcb[i].srd = 0;
             // Sets all required SRD bits
@@ -614,6 +616,7 @@ bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackByt
             // That is where the SRD bit for that thread begins
             tcb[i].srd <<= ((uint32_t)tcb[i].spInit - stackBytes) / 0x400;
             stringCopy(name, tcb[i].name);
+            tcb[i].semaphore = 0;
             // increment task count
             taskCount++;
             ok = true;
@@ -633,6 +636,18 @@ void restartThread(_fn fn)
 // NOTE: see notes in class for strategies on whether stack is freed or not
 void destroyThread(_fn fn)
 {
+    uint8_t i = 0;
+    for(; i < taskCount; i++)
+        if(tcb[i].pid == fn)
+        {
+            // Remove information from the semaphore array
+            if(tcb[i].semaphore != 0)
+            {
+
+            }
+            tcb[i].state = STATE_KILLED;
+            break;
+        }
 }
 
 // REQUIRED: modify this function to set a thread priority

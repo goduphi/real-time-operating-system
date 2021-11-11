@@ -134,7 +134,7 @@ char* getFieldString(USER_DATA* data, uint8_t fieldNumber)
 {
     if((fieldNumber < MAX_FIELDS) &&
        (fieldNumber < data->fieldCount) &&
-        (data->fieldType[fieldNumber] == 'a'))
+        ((data->fieldType[fieldNumber] == 'a') || (data->fieldType[fieldNumber] == 'n')))
         return data->buffer + data->fieldPosition[fieldNumber];
     return 0;
 }
@@ -180,7 +180,12 @@ void shell(void)
         }
         else if(isCommand(&data, "kill", 1))
         {
-            int32_t pid = getFieldInteger(&data, 1);
+            uint32_t pid = hexStringToUint32(getFieldString(&data, 1));
+            if(pid == 0)
+            {
+                putsUart0("PID format is not know\n");
+                continue;
+            }
             kill(pid);
         }
         else if(isCommand(&data, "pi", 1))
