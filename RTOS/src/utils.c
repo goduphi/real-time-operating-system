@@ -7,6 +7,7 @@
 
 #include "uart0.h"
 #include "utils.h"
+#include "tString.h"
 
 void printUint8InDecimal(uint8_t n)
 {
@@ -67,9 +68,9 @@ void printUint8InHex(uint8_t n)
     }
 }
 
-// This power function is very limited and not the best implementation
+// This power function is very limited and not the best implementation.
 // Runs in O(b)
-uint32_t power32(uint16_t n, uint8_t b)
+uint32_t power32(uint8_t n, uint8_t b)
 {
     uint32_t res = 1;
     for(; b; b--)
@@ -77,15 +78,26 @@ uint32_t power32(uint16_t n, uint8_t b)
     return res;
 }
 
-uint32_t hexStringToUint32(char* n)
+uint32_t hexStringToUint32(const char* n)
 {
-    int8_t len = (uint8_t)strLen(n) - 1, p = 0;
+    if(n == 0)
+        return 0;
+
+    // 0x00002A
+    int8_t len = (uint8_t)strLen(n), p = 0, endingIndex = 0;
+
+    // Skip the 0x or 0X if they exist in the hex string
+    endingIndex = (len >= 3 && n[0] == '0' && (n[1] == 'x' || n[1] == 'X')) ? 2 : 0;
+
+    // Decrease the length by 1 because indexing starts at 0
+    len--;
+
     uint32_t res = 0;
-    while(len >= 0)
+    while(len >= endingIndex)
     {
         if(n[len] >= '0' && n[len] <= '9')
             res += (n[len] - '0') * power32(16, p);
-        else if(n[len] >= 'A' && n[len] <= 'F' || n[len] >= 'a' && n[len] <= 'f')
+        else if((n[len] >= 'A' && n[len] <= 'F') || (n[len] >= 'a' && n[len] <= 'f'))
         {
             switch(n[len])
             {
@@ -120,7 +132,7 @@ uint32_t hexStringToUint32(char* n)
         len--;
         p++;
     }
-    return (len < 0) ? res : 0;
+    return (len < endingIndex) ? res : 0;
 }
 
 void printUint32InHex(uint32_t n)

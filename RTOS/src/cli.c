@@ -183,15 +183,14 @@ void shell(void)
             uint32_t pid = hexStringToUint32(getFieldString(&data, 1));
             if(pid == 0)
             {
-                putsUart0("PID format is not know\n");
+                putsUart0("PID format is wrong bro!\n");
                 continue;
             }
             kill(pid);
         }
         else if(isCommand(&data, "pi", 1))
         {
-            char* arg = getFieldString(&data, 1);
-            pi(stringCompare(arg, "ON", 2));
+            // Will not be implemented
         }
         else if(isCommand(&data, "preempt", 1))
         {

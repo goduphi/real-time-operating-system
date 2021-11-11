@@ -22,7 +22,7 @@
 
 typedef enum _svcNumber
 {
-    YIELD = 7, SLEEP, WAIT, POST, SCHED, PREEMPT_MODE, REBOOT, PID, KILL, RESTART_THREAD, IPCS, PS
+    YIELD = 7, SLEEP, WAIT, POST, SCHED, PREEMPT_MODE, REBOOT, PID, KILL
 } svcNumber;
 
 extern void pushR4ToR11Psp();
@@ -42,7 +42,7 @@ uint8_t taskCount = 0;     // total number of valid tasks
 
 semaphore semaphores[MAX_SEMAPHORES];
 
-schedulerId schedulerIdCurrent = PRIORITY;
+schedulerId schedulerIdCurrent = ROUND_ROBIN;
 
 /*
  * Set's the threads to be run using PSP. By default, threads make use of the MSP,
