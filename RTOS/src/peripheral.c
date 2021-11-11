@@ -50,3 +50,21 @@ void initLedPb()
     enablePinPullup(PORTD, 6);
     enablePinPullup(PORTD, 7);
 }
+
+uint8_t readPbs()
+{
+    uint8_t sum = 0;
+    if(!getPinValue(PORTC, 4))
+        sum += 1;
+    if(!getPinValue(PORTC, 5))
+        sum += 2;
+    if(!getPinValue(PORTC, 6))
+        sum += 4;
+    if(!getPinValue(PORTC, 7))
+        sum += 8;
+    if(!getPinValue(PORTD, 6))
+        sum += 16;
+    if(!getPinValue(PORTD, 7))
+        sum += 32;
+    return sum;
+}

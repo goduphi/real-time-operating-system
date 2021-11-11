@@ -267,6 +267,19 @@ void svCallIsr()
     case REBOOT:
         NVIC_APINT_R = (0x05FA0000 | NVIC_APINT_SYSRESETREQ);
         break;
+    case PID:
+        {
+        uint32_t* pid = (uint32_t*)*(psp);
+        char* taskName = (char*)*(psp + 1);
+        uint8_t p = 0;
+        for(; p < taskCount; p++)
+            if(stringCompare(tcb[p].name, taskName, 16))
+            {
+                *pid = (uint32_t)tcb[p].pid;
+                break;
+            }
+        }
+        break;
     }
 }
 

@@ -38,25 +38,8 @@ void post(int8_t semaphore)
     __asm(" SVC  #10");
 }
 
-uint8_t readPbs()
-{
-    uint8_t sum = 0;
-    if(!getPinValue(PORTC, 4))
-        sum += 1;
-    if(!getPinValue(PORTC, 5))
-        sum += 2;
-    if(!getPinValue(PORTC, 6))
-        sum += 4;
-    if(!getPinValue(PORTC, 7))
-        sum += 8;
-    if(!getPinValue(PORTD, 6))
-        sum += 16;
-    if(!getPinValue(PORTD, 7))
-        sum += 32;
-    return sum;
-}
-
 // Turns priority inheritance on or off
+// Will not be implemented
 void pi(bool on)
 {
     char buffer[16];
@@ -82,7 +65,7 @@ void rebootSystem()
 }
 
 // Displays the PID of the process (thread)
-void pidof(char name[])
+void pidof(uint32_t* pid, char name[])
 {
     __asm(" SVC #14");
 }
@@ -92,16 +75,17 @@ void kill(int32_t pid)
 {
     __asm(" SVC #15");
 }
+
 // Insert proc_name &
 
 // Displays the inter-process (thread) communication state
 void ipcs()
 {
-    __asm(" SVC #16");
+    __asm(" SVC #17");
 }
 
 // Displays the process (thread) information
 void ps()
 {
-    __asm(" SVC #17");
+    __asm(" SVC #18");
 }

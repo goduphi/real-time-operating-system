@@ -16,5 +16,6 @@
 
 void initSysTick(uint32_t loadValue);
 void initLedPb();
+uint8_t readPbs();
 
 #endif /* INCLUDE_PERIPHERAL_H_ */

@@ -15,11 +15,7 @@ void yield();
 void sleep(uint32_t tick);
 void wait(int8_t semaphore);
 void post(int8_t semaphore);
-
-uint8_t readPbs();
-
 void rebootSystem();
-
 // Displays the process (thread) information
 void ps();
 // Displays the inter-process (thread) communication state
@@ -33,6 +29,6 @@ void preempt(bool on);
 // Selected priority or round-robin scheduling
 void sched(bool prioOn);
 // Displays the PID of the process (thread)
-void pidof(char name[]);
+void pidof(uint32_t* pid, char name[]);
 
 #endif /* INCLUDE_SYSCALLS_H_ */

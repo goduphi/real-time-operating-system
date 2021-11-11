@@ -13,6 +13,7 @@
 #include "cli.h"
 #include "tString.h"
 #include "syscalls.h"
+#include "utils.h"
 
 #define MAX_HISTORY_NUMBER              5
 #define MAX_HISTORY_COMMAND_LENGTH      10
@@ -163,7 +164,7 @@ void shell(void)
 
     while(true)
     {
-        putcUart0('>');
+        putsUart0("goduphi> ");
         getsUart0(&data);
         parseField(&data);
 
@@ -204,8 +205,17 @@ void shell(void)
         }
         else if(isCommand(&data, "pidof", 1))
         {
-            char* arg = getFieldString(&data, 1);
-            pidof(arg);
+            char* taskName = getFieldString(&data, 1);
+            uint32_t pid = 0;
+            pidof(&pid, taskName);
+            if(pid == 0)
+            {
+                putsUart0("Task not found\n");
+                continue;
+            }
+            putsUart0("PID: 0x");
+            printUint32InHex(pid);
+            putcUart0('\n');
         }
         else if(isCommand(&data, "procName", 1))
         {

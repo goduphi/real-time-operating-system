@@ -79,7 +79,7 @@ typedef enum _schedulerId
 
 #define SIZE_8KIB           0x0000000C      // SIZE = 12 in 2^(SIZE + 1) to obtain a 8KiB size
 
-// #define DEBUG
+#define DEBUG
 
 // Set the processor to use the Process Stack Pointer for thread mode
 void setPspMode();
