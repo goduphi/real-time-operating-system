@@ -59,6 +59,11 @@ struct _tcb
     void *semaphore;               // pointer to the semaphore that is blocking the thread
 } tcb[MAX_TASKS];
 
+typedef enum _schedulerId
+{
+    ROUND_ROBIN, PRIORITY
+} schedulerId;
+
 #define REGION_0            0x00000000      // Lowest priority
 #define REGION_1            0x00000001
 #define REGION_2            0x00000002
@@ -95,6 +100,7 @@ void enableMPU();
 void initRtos();
 int rtosScheduler();
 int priorityRtosScheduler();
+void setSchedulerMode(schedulerId schedId);
 void initTaskNextPriorities();
 bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackBytes);
 void restartThread(_fn fn);

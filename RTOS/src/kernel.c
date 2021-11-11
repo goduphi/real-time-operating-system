@@ -22,7 +22,7 @@
 
 typedef enum _svcNumber
 {
-    YIELD = 7, SLEEP, WAIT, POST
+    YIELD = 7, SLEEP, WAIT, POST, SCHED, PREEMPT_MODE, REBOOT, PID, KILL, RESTART_THREAD, IPCS, PS
 } svcNumber;
 
 extern void pushR4ToR11Psp();
@@ -41,6 +41,8 @@ uint8_t taskCurrent = 0;   // index of last dispatched task
 uint8_t taskCount = 0;     // total number of valid tasks
 
 semaphore semaphores[MAX_SEMAPHORES];
+
+schedulerId schedulerIdCurrent = PRIORITY;
 
 /*
  * Set's the threads to be run using PSP. By default, threads make use of the MSP,
@@ -221,7 +223,7 @@ void svCallIsr()
         NVIC_INT_CTRL_R |= NVIC_INT_CTRL_PEND_SV;
         break;
 
-    // IMPORTANT: *psp represents r0 for both wait and post. It is the semaphore index
+    // IMPORTANT: *psp represents r0 for both wait and post. It is the semaphore index.
 
     // As long as the semaphore count is greater than 0, the task will be scheduled,
     // otherwise, we want for a post to occur until the task resumes execution.
@@ -255,6 +257,15 @@ void svCallIsr()
                 semaphores[*psp].processQueue[i] = semaphores[*psp].processQueue[i + 1];
             semaphores[*psp].queueSize--;
         }
+        break;
+    case SCHED:
+        // Function signature: void sched(bool prioOn)
+        schedulerIdCurrent = ((bool)*psp) ? PRIORITY : ROUND_ROBIN;
+        break;
+    case PREEMPT_MODE:
+        break;
+    case REBOOT:
+        NVIC_APINT_R = (0x05FA0000 | NVIC_APINT_SYSRESETREQ);
         break;
     }
 }
@@ -372,8 +383,18 @@ void PendSVISR()
 
     // Save the PSP into the tcb
     tcb[taskCurrent].sp = (void*)getPsp();
+
     // Get a new task to run
-    taskCurrent = (uint8_t)priorityRtosScheduler();
+    switch(schedulerIdCurrent)
+    {
+    case ROUND_ROBIN:
+        taskCurrent = (uint8_t)rtosScheduler();
+        break;
+    case PRIORITY:
+        taskCurrent = (uint8_t)priorityRtosScheduler();
+        break;
+    }
+
     if(tcb[taskCurrent].state == STATE_READY)
     {
         // Put into PSP the task current to switch task

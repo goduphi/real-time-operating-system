@@ -22,6 +22,7 @@
 #include <stdbool.h>
 #include "tm4c123gh6pm.h"
 #include "uart0.h"
+#include "syscalls.h"
 
 // PortA masks
 #define UART_TX_MASK 2
@@ -94,9 +95,11 @@ void putsUart0(char* str)
 }
 
 // Blocking function that returns with serial data once the buffer is not empty
+// Add a yield to gecUart0() to make sure we are not always taking up cpu time
 char getcUart0()
 {
-    while (UART0_FR_R & UART_FR_RXFE);               // wait if uart0 rx fifo empty
+    while (UART0_FR_R & UART_FR_RXFE)                // wait if uart0 rx fifo empty
+        yield();
     return UART0_DR_R & 0xFF;                        // get character from fifo
 }
 

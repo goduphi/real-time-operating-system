@@ -56,31 +56,6 @@ uint8_t readPbs()
     return sum;
 }
 
-void rebootSystem()
-{
-    NVIC_APINT_R = (0x05FA0000 | NVIC_APINT_SYSRESETREQ);
-}
-
-// Displays the process (thread) information
-void ps()
-{
-    putsUart0("PS called\n");
-}
-
-// Displays the inter-process (thread) communication state
-void ipcs()
-{
-    putsUart0("IPCS called\n");
-}
-
-// Kills the process (thread) with matching PID
-void kill(int32_t pid)
-{
-    char buffer[16];
-    sprintf(buffer, "pid %d killed\n", pid);
-    putsUart0(buffer);
-}
-
 // Turns priority inheritance on or off
 void pi(bool on)
 {
@@ -89,26 +64,44 @@ void pi(bool on)
     putsUart0(buffer);
 }
 
-// Turns preemption on or off
-void preempt(bool on)
-{
-    char buffer[16];
-    sprintf(buffer, "preempt %s\n", (on) ? "on" : "off");
-    putsUart0(buffer);
-}
-
 // Selected priority or round-robin scheduling
 void sched(bool prioOn)
 {
-    char buffer[16];
-    sprintf(buffer, "sched %s\n", (prioOn) ? "prio" : "rr");
-    putsUart0(buffer);
+    __asm(" SVC #11");
+}
+
+// Turns preemption on or off
+void preempt(bool on)
+{
+    __asm(" SVC #12");
+}
+
+void rebootSystem()
+{
+    __asm(" SVC #13");
 }
 
 // Displays the PID of the process (thread)
 void pidof(char name[])
 {
-    char buffer[32];
-    sprintf(buffer, "%s launched\n", name);
-    putsUart0(buffer);
+    __asm(" SVC #14");
+}
+
+// Kills the process (thread) with matching PID
+void kill(int32_t pid)
+{
+    __asm(" SVC #15");
+}
+// Insert proc_name &
+
+// Displays the inter-process (thread) communication state
+void ipcs()
+{
+    __asm(" SVC #16");
+}
+
+// Displays the process (thread) information
+void ps()
+{
+    __asm(" SVC #17");
 }

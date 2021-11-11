@@ -156,8 +156,8 @@ int32_t getFieldInteger(USER_DATA* data, uint8_t fieldNumber)
 
 void shell(void)
 {
-    initUart0();
-    setUart0BaudRate(115200, 40e6);
+    // initUart0();
+    // setUart0BaudRate(115200, 40e6);
 
     USER_DATA data;
 
@@ -168,10 +168,7 @@ void shell(void)
         parseField(&data);
 
         if(isCommand(&data, "reboot", 0))
-        {
-            putsUart0("Rebooting...\n");
             rebootSystem();
-        }
         else if(isCommand(&data, "ps", 0))
         {
             ps();
@@ -198,7 +195,12 @@ void shell(void)
         else if(isCommand(&data, "sched", 1))
         {
             char* arg = getFieldString(&data, 1);
-            sched(stringCompare(arg, "prio", 4));
+            bool ok = stringCompare(arg, "prio", 4);
+            if(ok)
+                putsUart0("Switching to Priority Scheduling\n");
+            else
+                putsUart0("Switching to Round Robin Scheduling\n");
+            sched(ok);
         }
         else if(isCommand(&data, "pidof", 1))
         {
@@ -211,7 +213,7 @@ void shell(void)
             if(stringCompare(arg, "&", 1))
             {
                 putsUart0("Running proc_name in the background\n");
-                setPinValue(PORTF, 1, 1);
+                // setPinValue(PORTF, 1, 1);
             }
             else
                 putsUart0("Invalid argument to proc_name\n");
