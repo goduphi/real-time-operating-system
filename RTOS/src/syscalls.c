@@ -77,6 +77,10 @@ void kill(uint32_t pid)
 }
 
 // Insert proc_name &
+void resume(const char* name)
+{
+    __asm(" SVC #16");
+}
 
 // Displays the inter-process (thread) communication state
 void ipcs()

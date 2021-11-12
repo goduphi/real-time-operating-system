@@ -221,16 +221,11 @@ void shell(void)
             printUint32InHex(pid);
             putcUart0('\n');
         }
-        else if(isCommand(&data, "procName", 1))
+        else
         {
             char* arg = getFieldString(&data, 1);
-            if(stringCompare(arg, "&", 1))
-            {
-                putsUart0("Running proc_name in the background\n");
-                // setPinValue(PORTF, 1, 1);
-            }
-            else
-                putsUart0("Invalid argument to proc_name\n");
+            if(stringCompare(arg, "&", 1) && data.fieldCount <= 2)
+                resume(&data.buffer[data.fieldPosition[0]]);
         }
     }
 }

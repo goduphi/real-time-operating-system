@@ -22,7 +22,7 @@
 
 typedef enum _svcNumber
 {
-    YIELD = 7, SLEEP, WAIT, POST, SCHED, PREEMPT_MODE, REBOOT, PID, KILL
+    YIELD = 7, SLEEP, WAIT, POST, SCHED, PREEMPT_MODE, REBOOT, PID, KILL, RESUME
 } svcNumber;
 
 extern void pushR4ToR11Psp();
@@ -234,7 +234,7 @@ void svCallIsr()
         else
         {
             semaphores[*psp].processQueue[semaphores[*psp].queueSize++] = taskCurrent;
-            // Store a pointer to the semaphore of the current task
+            // Store a pointer to the semaphore the task is waiting on
             tcb[taskCurrent].semaphore = (void*)(semaphores + *psp);
             tcb[taskCurrent].state = STATE_BLOCKED;
             // Trigger a PendSV ISR call
@@ -268,6 +268,8 @@ void svCallIsr()
         NVIC_APINT_R = (0x05FA0000 | NVIC_APINT_SYSRESETREQ);
         break;
     case PID:
+        // One important thing to check for are all the pointers by the user. They have to
+        // be within the region of the user task.
         {
         uint32_t* pid = (uint32_t*)*(psp);
         char* taskName = (char*)*(psp + 1);
@@ -283,6 +285,24 @@ void svCallIsr()
         break;
     case KILL:
         destroyThread((_fn)*psp);
+        break;
+    case RESUME:
+        // Restarts the thread.
+        // This seems redundant as we can easily change the state of the task here. The
+        // problem is that we need code on the user side which can also restart threads.
+        // The svc isr is not accessible by user space, so an auxiliary restart function
+        // is required.
+        {
+        char* taskName = (char*)*psp;
+        uint8_t p = 0;
+        for(; p < taskCount; p++)
+            if(stringCompare(tcb[p].name, taskName, 16) && tcb[p].state == STATE_KILLED)
+            {
+                restartThread((_fn)tcb[p].pid);
+                break;
+            }
+        // Set some ERRNO value if p == taskCount. This implies that the task was never found
+        }
         break;
     }
 }
@@ -629,6 +649,14 @@ bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackByt
 // REQUIRED: modify this function to restart a thread
 void restartThread(_fn fn)
 {
+    uint8_t i = 0;
+    for(; i < taskCount; i++)
+        if(tcb[i].pid == fn)
+        {
+            tcb[i].sp = tcb[i].spInit;
+            tcb[i].state = STATE_UNRUN;
+            break;
+        }
 }
 
 // REQUIRED: modify this function to destroy a thread
@@ -640,10 +668,25 @@ void destroyThread(_fn fn)
     for(; i < taskCount; i++)
         if(tcb[i].pid == fn)
         {
+            semaphore* s = (semaphore*)tcb[i].semaphore;
             // Remove information from the semaphore array
-            if(tcb[i].semaphore != 0)
+            if(tcb[i].semaphore != 0 && tcb[i].state == STATE_BLOCKED)
             {
-
+                uint8_t sCounter = 0;
+                for(; sCounter < s->queueSize; sCounter++)
+                    if(s->processQueue[sCounter] == i)
+                    {
+                        // Since I am removing a semaphore, I just named the counter r
+                        int8_t r = sCounter;
+                        for(; r < s->queueSize - 1; r++)
+                        {
+                            s->processQueue[r] = s->processQueue[r + 1];
+                            s->queueSize--;
+                        }
+                        s->processQueue[r] = 0;
+                        if(s->queueSize == 1)
+                            s->queueSize = 0;
+                    }
             }
             tcb[i].state = STATE_KILLED;
             break;
@@ -668,7 +711,17 @@ bool createSemaphore(uint8_t semaphore, uint8_t count)
 // by calling scheduler, setting PSP, ASP bit, and PC
 void startRtos()
 {
-    taskCurrent = (uint8_t)priorityRtosScheduler();
+    // Get a new task to run
+    switch(schedulerIdCurrent)
+    {
+    case ROUND_ROBIN:
+        taskCurrent = (uint8_t)rtosScheduler();
+        break;
+    case PRIORITY:
+        taskCurrent = (uint8_t)priorityRtosScheduler();
+        break;
+    }
+
     setPsp((uint32_t)tcb[taskCurrent].sp);
     setPspMode();
     _fn fn = (_fn)tcb[taskCurrent].pid;
