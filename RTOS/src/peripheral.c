@@ -13,6 +13,19 @@ void initSysTick(uint32_t loadValue)
     NVIC_ST_RELOAD_R = loadValue & 0x00FFFFFF;
 }
 
+void initTimer1()
+{
+    // Enable clocks
+    SYSCTL_RCGCTIMER_R |= SYSCTL_RCGCTIMER_R1;
+    _delay_cycles(3);
+
+    // Configure Timer 1
+    TIMER1_CTL_R &= ~TIMER_CTL_TAEN;                 // turn-off timer before reconfiguring
+    TIMER1_CFG_R = TIMER_CFG_32_BIT_TIMER;           // configure as 32-bit timer (A+B)
+    TIMER1_TAMR_R = TIMER_TAMR_TAMR_PERIOD | TIMER_TAMR_TACDIR;     // configure for periodic mode (count up)
+    TIMER1_CTL_R |= TIMER_CTL_TAEN;                  // turn-on timer
+}
+
 void initLedPb()
 {
     enablePort(PORTA);

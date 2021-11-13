@@ -21,6 +21,7 @@ void initHw()
     initSystemClockTo40Mhz();
     initLedPb();
     initSysTick(SYSTIC_1KHZ);
+    initTimer1();
 
     // Turn off all the LEDs
     BLUE_LED = 0;

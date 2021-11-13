@@ -13,6 +13,7 @@
 #include "uart0.h"
 #include "utils.h"
 #include "tString.h"
+#include "peripheral.h"
 
 #define SRAM_BASE                       0x20000000
 #define EXEC_RETURN_THREAD_MODE         0xFFFFFFFD
@@ -22,7 +23,7 @@
 
 typedef enum _svcNumber
 {
-    YIELD = 7, SLEEP, WAIT, POST, SCHED, PREEMPT_MODE, REBOOT, PID, KILL, RESUME, IPCS
+    YIELD = 7, SLEEP, WAIT, POST, SCHED, PREEMPT_MODE, REBOOT, PID, KILL, RESUME, IPCS, PS
 } svcNumber;
 
 extern void pushR4ToR11Psp();
@@ -37,8 +38,13 @@ extern void pushPsp(uint32_t r0);
 // starting at 0x20001400
 uint32_t* heap = (uint32_t*)0x20001400;
 
-uint8_t taskCurrent = 0;   // index of last dispatched task
-uint8_t taskCount = 0;     // total number of valid tasks
+uint8_t taskCurrent = 0;        // index of last dispatched task
+uint8_t taskCount = 0;          // total number of valid tasks
+uint32_t taskStartTime = 0;     // Time when a task starts executing
+uint32_t taskEndTime = 0;      // Time when a task ends executing
+
+uint32_t cpuUsageTime[MAX_TASKS];
+uint16_t systickCount = 0;
 
 semaphore semaphores[MAX_SEMAPHORES];
 
@@ -190,6 +196,19 @@ void systickIsr()
             }
             tcb[i].ticks--;
         }
+
+    // Every second, accumulate the total time of all the tasks run
+    if(systickCount == TWO_SECOND_SYSTICK)
+    {
+        systickCount = 0;
+        for(i = 0; i < taskCount; i++)
+        {
+            if(tcb[i].state != STATE_INVALID)
+                cpuUsageTime[i] = tcb[i].time;
+            tcb[i].time = 0;
+        }
+    }
+    systickCount++;
 }
 
 // REQUIRED: modify this function to add support for the service call
@@ -313,6 +332,13 @@ void svCallIsr()
         getIpcsData(arg);
         }
         break;
+    case PS:
+        {
+        struct _taskInfo* arg = (struct _taskInfo*)*psp;
+        uint8_t* tiCountPtr = (uint8_t*)*(psp + 1);
+        getPsInfo(arg, tiCountPtr);
+        }
+        break;
     }
 }
 
@@ -430,6 +456,13 @@ void PendSVISR()
     // Save the PSP into the tcb
     tcb[taskCurrent].sp = (void*)getPsp();
 
+    taskEndTime = TIMER1_TAV_R;
+
+    tcb[taskCurrent].time += taskEndTime - taskStartTime;
+
+    // Reset the timer for calculating a new time interval
+    TIMER1_TAV_R = 0xFFFFFFFF;
+
     // Get a new task to run
     switch(schedulerIdCurrent)
     {
@@ -440,6 +473,8 @@ void PendSVISR()
         taskCurrent = (uint8_t)priorityRtosScheduler();
         break;
     }
+
+    taskStartTime = TIMER1_TAV_R;
 
     if(tcb[taskCurrent].state == STATE_READY)
     {
@@ -644,6 +679,7 @@ bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackByt
             // Find the offset to the end of the stack space for a thread
             // That is where the SRD bit for that thread begins
             tcb[i].srd <<= ((uint32_t)tcb[i].spInit - stackBytes) / 0x400;
+            tcb[i].time = 0;
             stringCopy(name, tcb[i].name, 16);
             tcb[i].semaphore = 0;
             // increment task count
@@ -722,11 +758,26 @@ void getIpcsData(struct _semaphoreInformation* si)
             si[i].waitQueue[j] = semaphores[i].processQueue[j];
     }
 
+    // This does not need to be copied over every time. This should be changed so that
+    // the names are persistent instead of being copied over and over again.
     stringCopy("null", si[0].name, 16);
     stringCopy("keyPressed", si[1].name, 16);
     stringCopy("keyReleased", si[2].name, 16);
     stringCopy("flashReq", si[3].name, 16);
     stringCopy("resource", si[4].name, 16);
+}
+
+void getPsInfo(struct _taskInfo* ti, uint8_t* tiCount)
+{
+    uint8_t i = 0;
+    for(; i < taskCount; i++)
+    {
+        stringCopy(tcb[i].name, ti[i].name, 16);
+        ti[i].pid = (uint32_t)tcb[i].pid;
+        ti[i].state = tcb[i].state;
+        ti[i].time = cpuUsageTime[i];
+    }
+    *tiCount = taskCount;
 }
 
 bool createSemaphore(uint8_t semaphore, uint8_t count)
@@ -752,6 +803,8 @@ void startRtos()
         taskCurrent = (uint8_t)priorityRtosScheduler();
         break;
     }
+
+    taskStartTime = TIMER1_TAV_R;
 
     setPsp((uint32_t)tcb[taskCurrent].sp);
     setPspMode();

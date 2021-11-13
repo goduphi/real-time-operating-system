@@ -172,7 +172,54 @@ void shell(void)
             rebootSystem();
         else if(isCommand(&data, "ps", 0))
         {
-            ps();
+            taskInfo ti[MAX_TASKS_TASK_INFO];
+            uint8_t tiCount = 0;
+            ps(ti, &tiCount);
+            uint32_t totalTime = 0;
+            uint8_t i = 0;
+            for(; i < tiCount; i++)
+                totalTime += ti[i].time;
+
+            putcUart0('\n');
+            printfString(12, "Task Name");
+            printfString(12, "PID");
+            printfString(12, "CPU Usage");
+            printfString(12, "State");
+            putsUart0("\n\n");
+            for(i = 0; i < tiCount; i++)
+            {
+                printfString(12, ti[i].name);
+                printfInteger(12, ti[i].pid);
+                uint32_t cpuUsage = ti[i].time * 100 * 100;
+                cpuUsage /= totalTime;
+                printfInteger(12, cpuUsage);
+
+                // The state of the task should not be known by the user
+                // This is just for demonstration purposes
+                switch(ti[i].state)
+                {
+                case 0:
+                    printfString(12, "INVALID");
+                    break;
+                case 1:
+                    printfString(12, "UNRUN");
+                    break;
+                case 2:
+                    printfString(12, "READY");
+                    break;
+                case 3:
+                    printfString(12, "DELAYED");
+                    break;
+                case 4:
+                    printfString(12, "BLOCKED");
+                    break;
+                case 5:
+                    printfString(12, "KILLED");
+                    break;
+                }
+                putcUart0('\n');
+            }
+            putcUart0('\n');
         }
         else if(isCommand(&data, "ipcs", 0))
         {
@@ -181,11 +228,7 @@ void shell(void)
             uint8_t i = 0;
             for(; i < MAX_SEM_INFO_SIZE; i++)
             {
-                putsUart0(semInfo[i].name);
-                uint8_t l = 0, len = strLen(semInfo[i].name);
-                // 12 is the number of spaces to reserve
-                for(; l < 12 - len; l++)
-                    putcUart0(' ');
+                printfString(12, semInfo[i].name);
                 putsUart0(" | ");
                 printUint8InDecimal(semInfo[i].count);
                 putsUart0(" | ");
@@ -247,6 +290,8 @@ void shell(void)
             char* arg = getFieldString(&data, 1);
             if(stringCompare(arg, "&", 1) && data.fieldCount <= 2)
                 resume(&data.buffer[data.fieldPosition[0]]);
+            else
+                putsUart0("Not a valid Goduphi command!\n");
         }
     }
 }

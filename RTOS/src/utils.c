@@ -135,6 +135,25 @@ uint32_t hexStringToUint32(const char* n)
     return (len < endingIndex) ? res : 0;
 }
 
+void printUint32InDecimal(uint32_t n)
+{
+    if(n == 0)
+        putcUart0('0');
+    // There can be a maximum of 10 character inside of a 32-bit integer
+    char buffer[10] = { 0 };
+    int8_t i = 9;
+    while(n)
+    {
+        buffer[i] = (n % 10) + '0';
+        n /= 10;
+        i--;
+    }
+    if(i < 0)
+        i = 0;
+    for(; i < 10; i++)
+        putcUart0(buffer[i]);
+}
+
 void printUint32InHex(uint32_t n)
 {
     printUint8InHex((n >> 24) & 0xFF);
@@ -152,4 +171,34 @@ void printUint32InBinary(uint32_t n)
         putcUart0((n & i) ? '1' : '0');
         i >>= 1;
     }
+}
+
+// The function is intentionally written with only 255 max space reservation
+void printfString(uint8_t spaceToReserve, char* s)
+{
+    putsUart0(s);
+    spaceToReserve -= strLen(s);
+    while(spaceToReserve--)
+        putcUart0(' ');
+}
+
+uint8_t numberOfDigitsInInteger(uint32_t n)
+{
+    if(n == 0)
+        return 1;
+    uint8_t res = 0;
+    while(n)
+    {
+        res++;
+        n /= 10;
+    }
+    return res;
+}
+
+void printfInteger(uint8_t spaceToReserve, uint32_t n)
+{
+    printUint32InDecimal(n);
+    spaceToReserve -= numberOfDigitsInInteger(n);
+    while(spaceToReserve--)
+        putcUart0(' ');
 }

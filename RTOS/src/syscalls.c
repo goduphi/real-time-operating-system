@@ -89,7 +89,7 @@ void ipcs(semaphoreInfo* semInfo)
 }
 
 // Displays the process (thread) information
-void ps()
+void ps(taskInfo* ti, uint8_t* tiCount)
 {
     __asm(" SVC #18");
 }

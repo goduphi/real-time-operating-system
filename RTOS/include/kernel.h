@@ -68,10 +68,21 @@ struct _tcb
     int8_t priority;               // 0=highest to 15=lowest
     uint32_t ticks;                // ticks until sleep complete
     uint32_t srd;                  // MPU subregion disable bits
+    uint32_t time;                 // Amount of the time the task spent running
     char name[16];                 // name of task used in ps command
     void *semaphore;               // pointer to the semaphore that is blocking the thread
 } tcb[MAX_TASKS];
 
+// User space struct to store pid info
+struct _taskInfo
+{
+    uint8_t state;                 // see STATE_ values above
+    uint32_t pid;                  // used to uniquely identify thread
+    char name[16];                 // name of task used in ps command
+    uint32_t time;                 // CPU usage time
+};
+
+// Scheduler
 typedef enum _schedulerId
 {
     ROUND_ROBIN, PRIORITY
@@ -92,7 +103,7 @@ typedef enum _schedulerId
 
 #define SIZE_8KIB           0x0000000C      // SIZE = 12 in 2^(SIZE + 1) to obtain a 8KiB size
 
-#define DEBUG
+// #define DEBUG
 
 // Set the processor to use the Process Stack Pointer for thread mode
 void setPspMode();
@@ -120,6 +131,7 @@ void restartThread(_fn fn);
 void destroyThread(_fn fn);
 void setThreadPriority(_fn fn, uint8_t priority);
 void getIpcsData(struct _semaphoreInformation* si);
+void getPsInfo(struct _taskInfo* ti, uint8_t* tiCount);
 bool createSemaphore(uint8_t semaphore, uint8_t count);
 void startRtos();
 

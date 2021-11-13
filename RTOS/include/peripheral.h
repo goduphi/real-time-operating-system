@@ -12,9 +12,12 @@
 #include "tm4c123gh6pm.h"
 #include "gpio.h"
 
-#define SYSTIC_1KHZ     39999
+#define SYSTIC_1KHZ         39999
+#define ONE_SECOND_SYSTICK  1000
+#define TWO_SECOND_SYSTICK  2000
 
 void initSysTick(uint32_t loadValue);
+void initTimer1();
 void initLedPb();
 uint8_t readPbs();
 
