@@ -190,9 +190,29 @@ void shell(void)
             {
                 printfString(12, ti[i].name);
                 printfInteger(12, ti[i].pid);
-                uint32_t cpuUsage = ti[i].time * 100 * 100;
+
+                // This is very crucial. Multiplying by 100 * 100 causes a 32 bit uint overflow.
+                // Use a uint64_t instead.
+                uint64_t cpuUsage = (uint64_t)ti[i].time * 100 * 100;
                 cpuUsage /= totalTime;
-                printfInteger(12, cpuUsage);
+
+                // Emulate a floating point value
+                char oneOverTen = cpuUsage % 10 + '0';
+                cpuUsage /= 10;
+                char oneOverHundred = cpuUsage % 10 + '0';
+                cpuUsage /= 10;
+                printUint32InDecimal((uint32_t)cpuUsage);
+                putcUart0('.');
+                putcUart0(oneOverTen);
+                putcUart0(oneOverHundred);
+                putsUart0("      ");
+                /*
+                // Add .00 length
+                cpuUsageLength += 3;
+                uint8_t space = 0;
+                for(; space < 12 - cpuUsageLength; space++)
+                    putcUart0(' ');
+                */
 
                 // The state of the task should not be known by the user
                 // This is just for demonstration purposes
@@ -259,7 +279,12 @@ void shell(void)
         else if(isCommand(&data, "preempt", 1))
         {
             char* arg = getFieldString(&data, 1);
-            preempt(stringCompare(arg, "ON", 2));
+            bool ok = stringCompare(arg, "on", 4);
+            if(ok)
+                putsUart0("Preemption on\n");
+            else
+                putsUart0("Preemption off\n");
+            preempt(ok);
         }
         else if(isCommand(&data, "sched", 1))
         {

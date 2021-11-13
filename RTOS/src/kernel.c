@@ -49,6 +49,7 @@ uint16_t systickCount = 0;
 semaphore semaphores[MAX_SEMAPHORES];
 
 schedulerId schedulerIdCurrent = ROUND_ROBIN;
+bool preemption = false;
 
 /*
  * Set's the threads to be run using PSP. By default, threads make use of the MSP,
@@ -209,6 +210,10 @@ void systickIsr()
         }
     }
     systickCount++;
+
+    if(preemption)
+        // Trigger a PendSV ISR call
+        NVIC_INT_CTRL_R |= NVIC_INT_CTRL_PEND_SV;
 }
 
 // REQUIRED: modify this function to add support for the service call
@@ -285,6 +290,7 @@ void svCallIsr()
         schedulerIdCurrent = ((bool)*psp) ? PRIORITY : ROUND_ROBIN;
         break;
     case PREEMPT_MODE:
+        preemption = ((bool)*psp) ? true : false;
         break;
     case REBOOT:
         NVIC_APINT_R = (0x05FA0000 | NVIC_APINT_SYSRESETREQ);
