@@ -83,7 +83,7 @@ void resume(const char* name)
 }
 
 // Displays the inter-process (thread) communication state
-void ipcs()
+void ipcs(semaphoreInfo* semInfo)
 {
     __asm(" SVC #17");
 }

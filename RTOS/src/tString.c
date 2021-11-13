@@ -22,10 +22,10 @@ bool stringCompare(const char string1[], const char string2[], uint8_t size)
 }
 
 // Prone to buffer overrun
-void stringCopy(const char* str1, char* str2)
+void stringCopy(const char* str1, char* str2, uint32_t size)
 {
     uint8_t i = 0;
-    for(i = 0; str1[i] != '\0'; i++)
+    for(i = 0; str1[i] != '\0' && i < size; i++)
         str2[i] = str1[i];
     str2[i] = '\0';
 }

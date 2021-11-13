@@ -176,7 +176,28 @@ void shell(void)
         }
         else if(isCommand(&data, "ipcs", 0))
         {
-            ipcs();
+            semaphoreInfo semInfo[MAX_SEM_INFO_SIZE];
+            ipcs(semInfo);
+            uint8_t i = 0;
+            for(; i < MAX_SEM_INFO_SIZE; i++)
+            {
+                putsUart0(semInfo[i].name);
+                uint8_t l = 0, len = strLen(semInfo[i].name);
+                // 12 is the number of spaces to reserve
+                for(; l < 12 - len; l++)
+                    putcUart0(' ');
+                putsUart0(" | ");
+                printUint8InDecimal(semInfo[i].count);
+                putsUart0(" | ");
+                uint8_t j = 0;
+                for(; j < semInfo[i].waitingTasksNumber; j++)
+                {
+                    printUint8InDecimal(semInfo[i].waitQueue[j]);
+                    if(j != semInfo[i].waitingTasksNumber - 1)
+                        putsUart0(", ");
+                }
+                putcUart0('\n');
+            }
         }
         else if(isCommand(&data, "kill", 1))
         {

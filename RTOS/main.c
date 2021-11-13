@@ -96,39 +96,6 @@ void idle()
     }
 }
 
-void idle2()
-{
-    while(true)
-    {
-        BLUE_LED = 1;
-        waitMicrosecond(1000);
-        BLUE_LED = 0;
-        yield();
-    }
-}
-
-void idle3()
-{
-    while(true)
-    {
-        YELLOW_LED = 0;
-        waitMicrosecond(1000);
-        YELLOW_LED = 1;
-        yield();
-    }
-}
-
-void idle4()
-{
-    while(true)
-    {
-        GREEN_LED = 0;
-        waitMicrosecond(1000);
-        GREEN_LED = 1;
-        yield();
-    }
-}
-
 void flash4Hz()
 {
     while(true)

@@ -22,12 +22,24 @@ typedef void (*_fn)();
 #define MAX_SEMAPHORES 5
 #define MAX_QUEUE_SIZE 5
 
+#define MAX_SEM_NAME                16
+#define MAX_SEM_WAIT_QUEUE_SIZE     5
+
 typedef struct _semaphore
 {
     uint16_t count;
     uint16_t queueSize;
     uint32_t processQueue[MAX_QUEUE_SIZE]; // store task index here
 } semaphore;
+
+// Custom struct for user space semaphore info
+struct _semaphoreInformation
+{
+    char name[MAX_SEM_NAME];
+    uint16_t count;
+    uint16_t waitingTasksNumber;
+    uint32_t waitQueue[MAX_SEM_WAIT_QUEUE_SIZE];
+};
 
 #define keyPressed 1
 #define keyReleased 2
@@ -107,6 +119,7 @@ bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackByt
 void restartThread(_fn fn);
 void destroyThread(_fn fn);
 void setThreadPriority(_fn fn, uint8_t priority);
+void getIpcsData(struct _semaphoreInformation* si);
 bool createSemaphore(uint8_t semaphore, uint8_t count);
 void startRtos();
 

@@ -10,6 +10,11 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "kernel.h"
+
+#define MAX_SEM_INFO_SIZE           5
+
+typedef struct _semaphoreInformation semaphoreInfo;
 
 void yield();
 void sleep(uint32_t tick);
@@ -19,7 +24,7 @@ void rebootSystem();
 // Displays the process (thread) information
 void ps();
 // Displays the inter-process (thread) communication state
-void ipcs();
+void ipcs(semaphoreInfo* semInfo);
 // Kills the process (thread) with matching PID
 void kill(uint32_t pid);
 // Turns priority inheritance on or off

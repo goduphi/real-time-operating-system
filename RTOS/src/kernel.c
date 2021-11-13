@@ -22,7 +22,7 @@
 
 typedef enum _svcNumber
 {
-    YIELD = 7, SLEEP, WAIT, POST, SCHED, PREEMPT_MODE, REBOOT, PID, KILL, RESUME
+    YIELD = 7, SLEEP, WAIT, POST, SCHED, PREEMPT_MODE, REBOOT, PID, KILL, RESUME, IPCS
 } svcNumber;
 
 extern void pushR4ToR11Psp();
@@ -233,12 +233,15 @@ void svCallIsr()
             semaphores[*psp].count--;
         else
         {
-            semaphores[*psp].processQueue[semaphores[*psp].queueSize++] = taskCurrent;
-            // Store a pointer to the semaphore the task is waiting on
-            tcb[taskCurrent].semaphore = (void*)(semaphores + *psp);
-            tcb[taskCurrent].state = STATE_BLOCKED;
-            // Trigger a PendSV ISR call
-            NVIC_INT_CTRL_R |= NVIC_INT_CTRL_PEND_SV;
+            if(semaphores[*psp].queueSize < MAX_QUEUE_SIZE)
+            {
+                semaphores[*psp].processQueue[semaphores[*psp].queueSize++] = taskCurrent;
+                // Store a pointer to the semaphore the task is waiting on
+                tcb[taskCurrent].semaphore = (void*)(semaphores + *psp);
+                tcb[taskCurrent].state = STATE_BLOCKED;
+                // Trigger a PendSV ISR call
+                NVIC_INT_CTRL_R |= NVIC_INT_CTRL_PEND_SV;
+            }
         }
         break;
     case POST:
@@ -302,6 +305,12 @@ void svCallIsr()
                 break;
             }
         // Set some ERRNO value if p == taskCount. This implies that the task was never found
+        }
+        break;
+    case IPCS:
+        {
+        struct _semaphoreInformation* arg = (struct _semaphoreInformation*)*psp;
+        getIpcsData(arg);
         }
         break;
     }
@@ -635,7 +644,7 @@ bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackByt
             // Find the offset to the end of the stack space for a thread
             // That is where the SRD bit for that thread begins
             tcb[i].srd <<= ((uint32_t)tcb[i].spInit - stackBytes) / 0x400;
-            stringCopy(name, tcb[i].name);
+            stringCopy(name, tcb[i].name, 16);
             tcb[i].semaphore = 0;
             // increment task count
             taskCount++;
@@ -677,6 +686,7 @@ void destroyThread(_fn fn)
                     if(s->processQueue[sCounter] == i)
                     {
                         // Since I am removing a semaphore, I just named the counter r
+                        // Shift all the elements back by 1 index to delete task
                         int8_t r = sCounter;
                         for(; r < s->queueSize - 1; r++)
                         {
@@ -684,6 +694,7 @@ void destroyThread(_fn fn)
                             s->queueSize--;
                         }
                         s->processQueue[r] = 0;
+                        // Decrement the queue size manually as the last element remaining is null
                         if(s->queueSize == 1)
                             s->queueSize = 0;
                     }
@@ -696,6 +707,26 @@ void destroyThread(_fn fn)
 // REQUIRED: modify this function to set a thread priority
 void setThreadPriority(_fn fn, uint8_t priority)
 {
+}
+
+// This is very implementation specific
+void getIpcsData(struct _semaphoreInformation* si)
+{
+    uint8_t i = 0;
+    for(; i < MAX_SEMAPHORES; i++)
+    {
+        si[i].count = semaphores[i].count;
+        si[i].waitingTasksNumber = semaphores[i].queueSize;
+        uint8_t j = 0;
+        for(; j < semaphores[i].queueSize; j++)
+            si[i].waitQueue[j] = semaphores[i].processQueue[j];
+    }
+
+    stringCopy("null", si[0].name, 16);
+    stringCopy("keyPressed", si[1].name, 16);
+    stringCopy("keyReleased", si[2].name, 16);
+    stringCopy("flashReq", si[3].name, 16);
+    stringCopy("resource", si[4].name, 16);
 }
 
 bool createSemaphore(uint8_t semaphore, uint8_t count)
