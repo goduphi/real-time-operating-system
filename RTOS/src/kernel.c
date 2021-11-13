@@ -48,7 +48,7 @@ uint16_t systickCount = 0;
 
 semaphore semaphores[MAX_SEMAPHORES];
 
-schedulerId schedulerIdCurrent = ROUND_ROBIN;
+schedulerId schedulerIdCurrent = PRIORITY;
 bool preemption = false;
 
 /*

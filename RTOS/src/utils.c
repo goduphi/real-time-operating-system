@@ -182,7 +182,7 @@ void printfString(uint8_t spaceToReserve, char* s)
         putcUart0(' ');
 }
 
-uint8_t numberOfDigitsInInteger(uint32_t n)
+uint8_t numberOfDigitsInDecimalInteger(uint32_t n)
 {
     if(n == 0)
         return 1;
@@ -195,10 +195,54 @@ uint8_t numberOfDigitsInInteger(uint32_t n)
     return res;
 }
 
-void printfInteger(uint8_t spaceToReserve, uint32_t n)
+// Only looks for one conversion specifier
+void printfInteger(const char* format, int8_t spaceToReserve, uint32_t n)
 {
-    printUint32InDecimal(n);
-    spaceToReserve -= numberOfDigitsInInteger(n);
-    while(spaceToReserve--)
-        putcUart0(' ');
+    // ni represents the counter for printing the integer value and
+    // the spaces to reserve
+    uint8_t i = 0;
+    // __%u
+    while(format[i] != '%' && format[i] != '\0')
+    {
+        putcUart0(format[i]);
+        i++;
+    }
+
+    i++;
+    bool padLeft = (format[i] == '-');
+
+    uint8_t nLen = numberOfDigitsInDecimalInteger(n);
+
+    if(padLeft && spaceToReserve >= nLen)
+    {
+        spaceToReserve -= nLen;
+        while(spaceToReserve--)
+            putcUart0(' ');
+    }
+    // Do not use this counter anymore as it remembers where
+    // we found the format specifier
+    // Find out what the conversion specifier is
+    i += (padLeft);
+
+    switch(format[i])
+    {
+    case 'u':
+        printUint32InDecimal(n);
+        break;
+    }
+
+    if(!padLeft && spaceToReserve > nLen)
+    {
+        spaceToReserve -= nLen;
+        while(spaceToReserve--)
+            putcUart0(' ');
+    }
+
+    // Start right after the conversion specifier
+    i++;
+    while(format[i] != '\0')
+    {
+        putcUart0(format[i]);
+        i++;
+    }
 }

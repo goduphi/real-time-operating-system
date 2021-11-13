@@ -183,13 +183,13 @@ void shell(void)
             putcUart0('\n');
             printfString(12, "Task Name");
             printfString(12, "PID");
-            printfString(12, "CPU Usage");
+            printfString(15, "CPU Usage (%)");
             printfString(12, "State");
             putsUart0("\n\n");
             for(i = 0; i < tiCount; i++)
             {
                 printfString(12, ti[i].name);
-                printfInteger(12, ti[i].pid);
+                printfInteger("%u", 12, ti[i].pid);
 
                 // This is very crucial. Multiplying by 100 * 100 causes a 32 bit uint overflow.
                 // Use a uint64_t instead.
@@ -201,18 +201,11 @@ void shell(void)
                 cpuUsage /= 10;
                 char oneOverHundred = cpuUsage % 10 + '0';
                 cpuUsage /= 10;
-                printUint32InDecimal((uint32_t)cpuUsage);
+                printfInteger("%-u", 2, (uint32_t)cpuUsage);
                 putcUart0('.');
                 putcUart0(oneOverTen);
                 putcUart0(oneOverHundred);
-                putsUart0("      ");
-                /*
-                // Add .00 length
-                cpuUsageLength += 3;
-                uint8_t space = 0;
-                for(; space < 12 - cpuUsageLength; space++)
-                    putcUart0(' ');
-                */
+                putsUart0("          ");
 
                 // The state of the task should not be known by the user
                 // This is just for demonstration purposes
