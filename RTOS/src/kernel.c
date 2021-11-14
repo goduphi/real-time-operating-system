@@ -153,6 +153,7 @@ void sRAMSubregionDisable(uint8_t region, uint32_t subregion)
         return;
     // Base address | Valid Bit | Region Number
     NVIC_MPU_NUMBER_R = region;
+    NVIC_MPU_ATTR_R &= ~(0x0000FF00);
     // Disable the sub-regions
     NVIC_MPU_ATTR_R |= subregion << 8;
 }
@@ -364,9 +365,6 @@ void MPUFaultHandler()
     uint32_t* msp = getMsp();
     uint32_t* psp = getPsp();
 
-    // Causes Hard Fault
-    // GPIO_PORTE_DATA_R |= 2;
-
     // Print MSP and PSP
     putsUart0("\n MSP = 0x");
     printUint32InHex((uint32_t)msp);
@@ -489,7 +487,6 @@ void PendSVISR()
         break;
     }
 
-    // Disable sub-region?
     setSrdBits(tcb[taskCurrent].srd);
 
     taskStartTime = TIMER1_TAV_R;
@@ -714,7 +711,7 @@ bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackByt
             // Put the SRD bits in the correct bit positions
             // Find the offset to the end of the stack space for a thread
             // That is where the SRD bit for that thread begins
-            tcb[i].srd <<= ((uint32_t)tcb[i].spInit - stackBytes) / 0x400;
+            tcb[i].srd <<= ((uint32_t)tcb[i].spInit - stackBytes) / 0x400 + 1;
             tcb[i].time = 0;
             stringCopy(name, tcb[i].name, 16);
             tcb[i].semaphore = 0;
