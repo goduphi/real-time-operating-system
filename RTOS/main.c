@@ -260,7 +260,7 @@ int main(void)
     createSemaphore(resource, 1);
 
     // Add required idle process at lowest priority
-    ok = createThread(idle, "Idle", 7, 1024);
+    ok = createThread(idle, "Idle", 7, 2000);
 
     // Add other processes
 

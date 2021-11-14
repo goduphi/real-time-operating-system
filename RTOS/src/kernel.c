@@ -670,6 +670,12 @@ int priorityRtosScheduler()
     return priNextTask[level - 1];
 }
 
+// Reference: https://stackoverflow.com/questions/3407012/rounding-up-to-the-nearest-multiple-of-a-number
+uint32_t roundUp(uint32_t numToRound, uint32_t multiple)
+{
+    return ((numToRound + multiple - 1) / multiple) * multiple;
+}
+
 bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackBytes)
 {
     bool ok = false;
@@ -711,7 +717,7 @@ bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackByt
             // Put the SRD bits in the correct bit positions
             // Find the offset to the end of the stack space for a thread
             // That is where the SRD bit for that thread begins
-            tcb[i].srd <<= ((uint32_t)tcb[i].spInit - stackBytes) / 0x400 + 1;
+            tcb[i].srd <<= ((uint32_t)tcb[i].spInit - roundUp(stackBytes, 1024)) / 0x400 + 1;
             tcb[i].time = 0;
             stringCopy(name, tcb[i].name, 16);
             tcb[i].semaphore = 0;
