@@ -149,7 +149,7 @@ void enableSRAMRule(uint32_t startAddress, uint32_t size, uint32_t region)
 
 void sRAMSubregionDisable(uint8_t region, uint32_t subregion)
 {
-    if(region < (REGION_2 & 0xFF) || (subregion > (0xFF << 8)) || (subregion & 0xFF != 0))
+    if((region < REGION_2 || region > REGION_5))
         return;
     // Base address | Valid Bit | Region Number
     NVIC_MPU_NUMBER_R = region;
@@ -159,12 +159,20 @@ void sRAMSubregionDisable(uint8_t region, uint32_t subregion)
 
 void sRAMSubregionEnable(uint8_t region, uint32_t subregion)
 {
-    if(region < (REGION_2 & 0xFF) || (subregion > (0xFF << 8)) || (subregion & 0xFF != 0))
+    if((region < REGION_2 || region > REGION_5))
         return;
     // Select the region
     NVIC_MPU_NUMBER_R = region;
     // Enable the sub-regions
     NVIC_MPU_ATTR_R &= ~(subregion << 8);
+}
+
+void setSrdBits(uint32_t srd)
+{
+    sRAMSubregionDisable(REGION_2, (srd >> 0) & 0x000000FF);
+    sRAMSubregionDisable(REGION_3, (srd >> 8) & 0x000000FF);
+    sRAMSubregionDisable(REGION_4, (srd >> 16) & 0x000000FF);
+    sRAMSubregionDisable(REGION_5, (srd >> 24) & 0x000000FF);
 }
 
 void enableMPU()
@@ -350,7 +358,8 @@ void svCallIsr()
 
 void MPUFaultHandler()
 {
-    putsUart0("\nMPU fault in process N\n");
+    putsUart0("\nMPU fault in process");
+    printfInteger("%-u", 2, taskCurrent);
 
     uint32_t* msp = getMsp();
     uint32_t* psp = getPsp();
@@ -480,6 +489,9 @@ void PendSVISR()
         break;
     }
 
+    // Disable sub-region?
+    setSrdBits(tcb[taskCurrent].srd);
+
     taskStartTime = TIMER1_TAV_R;
 
     if(tcb[taskCurrent].state == STATE_READY)
@@ -533,7 +545,8 @@ void BusFaultHandler()
 
 void UsageFaultHandler()
 {
-    putsUart0("\nUsage fault in process N\n");
+    putsUart0("\nUsage fault in process");
+    printfInteger("%-u", 2, taskCurrent);
 
     //
     // Enter an infinite loop.
@@ -587,6 +600,23 @@ void initRtos()
         tcb[i].state = STATE_INVALID;
         tcb[i].pid = 0;
     }
+
+
+    // Enable the MPU
+    enableBackgroundRegionRule();
+    enableFlashRule();
+
+    enableSRAMRule(SRAM_REGION_0, SIZE_8KIB, REGION_2);
+    enableSRAMRule(SRAM_REGION_1, SIZE_8KIB, REGION_3);
+    enableSRAMRule(SRAM_REGION_2, SIZE_8KIB, REGION_4);
+    enableSRAMRule(SRAM_REGION_3, SIZE_8KIB, REGION_5);
+
+    sRAMSubregionDisable(REGION_2, 0xE0);
+    sRAMSubregionDisable(REGION_3, 0xFF);
+    sRAMSubregionDisable(REGION_4, 0xFF);
+    sRAMSubregionDisable(REGION_5, 0xFF);
+
+    enableMPU();
 }
 
 // Schedulers!!!
@@ -675,8 +705,8 @@ bool createThread(_fn fn, const char name[], uint8_t priority, uint32_t stackByt
             // tmp currently stores the base address to use
             uint32_t tmp = (i == 0) ? (uint32_t)heap : (uint32_t)tcb[i - 1].spInit;
             // Base + (Number of 1KiB blocks * 1KiB)
-            tcb[i].sp = (void*)(tmp + (nSrd * 0x400));
-            tcb[i].spInit = (void*)(tmp + (nSrd * 0x400));
+            tcb[i].sp = (void*)(tmp + (nSrd * 0x400) - 1);
+            tcb[i].spInit = (void*)(tmp + (nSrd * 0x400) - 1);
             tcb[i].priority = priority;
             tcb[i].srd = 0;
             // Sets all required SRD bits
@@ -817,6 +847,7 @@ void startRtos()
     _fn fn = (_fn)tcb[taskCurrent].pid;
     // Mark the task as ready because we are going to run it
     tcb[taskCurrent].state = STATE_READY;
+    disablePrivilegeMode();
     fn();
 }
 

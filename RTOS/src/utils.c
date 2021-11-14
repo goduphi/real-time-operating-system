@@ -229,6 +229,10 @@ void printfInteger(const char* format, int8_t spaceToReserve, uint32_t n)
     case 'u':
         printUint32InDecimal(n);
         break;
+    case 'x':
+        break;
+    case 'd':
+        break;
     }
 
     if(!padLeft && spaceToReserve > nLen)

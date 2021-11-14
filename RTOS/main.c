@@ -169,11 +169,12 @@ void readKeys()
         }
         if ((buttons & 8) != 0)
         {
-            destroyThread(flash4Hz);
+            kill((uint32_t)flash4Hz);
         }
+        // Will not be implemented
         if ((buttons & 16) != 0)
         {
-            setThreadPriority(lengthyFn, 4);
+            // setThreadPriority(lengthyFn, 4);
         }
         yield();
     }
@@ -236,40 +237,6 @@ void important()
 
 int main(void)
 {
-    /*
-    // MPU Test
-    enableBackgroundRegionRule();
-    enableFlashRule();
-
-    enableSRAMRule(SRAM_REGION_0, SIZE_8KIB, REGION_2);
-    enableSRAMRule(SRAM_REGION_1, SIZE_8KIB, REGION_3);
-    enableSRAMRule(SRAM_REGION_2, SIZE_8KIB, REGION_4);
-    enableSRAMRule(SRAM_REGION_3, SIZE_8KIB, REGION_5);
-
-    sRAMSubregionEnable(REGION_2, 0xFF);
-    sRAMSubregionDisable(REGION_3, 0x02);
-    sRAMSubregionEnable(REGION_4, 0xFF);
-    sRAMSubregionEnable(REGION_5, 0xFF);
-
-    enableMPU();
-
-    disablePrivilegeMode();
-
-    // Causes Bus Fault
-    // GPIO_PORTE_DATA_R |= 2;
-
-    // Read Flash
-    readFlash();
-    // Read a peripheral
-    testPeripheralBitband();
-    // Test to see if the SRAM is accessible or not
-    *((volatile uint32_t *)0x20002400);
-    *((volatile uint32_t *)0x20002000);
-    *((volatile uint32_t *)0x20000000);
-    testFn();
-    // shell();
-    */
-
     bool ok;
 
     // Initialize hardware
@@ -296,6 +263,7 @@ int main(void)
     ok = createThread(idle, "Idle", 7, 1024);
 
     // Add other processes
+
     ok &= createThread(lengthyFn, "LengthyFn", 6, 1024);
     ok &= createThread(flash4Hz, "Flash4Hz", 4, 1024);
     ok &= createThread(oneshot, "OneShot", 2, 1024);

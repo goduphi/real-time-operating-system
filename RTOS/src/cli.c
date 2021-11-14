@@ -18,25 +18,6 @@
 #define MAX_HISTORY_NUMBER              5
 #define MAX_HISTORY_COMMAND_LENGTH      10
 
-// The commands will be stored in a queue
-char history[MAX_HISTORY_NUMBER][MAX_HISTORY_COMMAND_LENGTH];
-uint8_t historyReadPtr = 0;
-uint8_t historyWritePtr = 0;
-
-void updateHistory(const char* command)
-{
-    // Copy over the command to the history buffer
-    uint8_t i = 0;
-    for(i = 0; command[i] != '\0' && i < MAX_HISTORY_COMMAND_LENGTH; i++)
-        history[historyWritePtr][i] = command[i];
-    historyWritePtr = (historyWritePtr + 1) % MAX_HISTORY_NUMBER;
-}
-
-char* getCommandFromHistory()
-{
-    return 0;
-}
-
 // Gets a user defined string using the serial peripheral Uart0
 static void getsUart0(USER_DATA* data)
 {
@@ -64,8 +45,6 @@ static void getsUart0(USER_DATA* data)
         else if(c == 13 || c == 10)
         {
             data->buffer[count] = 0;
-            // Store the current command in the history buffer
-            updateHistory(data->buffer);
             return;
         }
         else if(c < 32)
@@ -238,22 +217,21 @@ void shell(void)
         {
             semaphoreInfo semInfo[MAX_SEM_INFO_SIZE];
             ipcs(semInfo);
+            printfString(14, "\nSemaphore");
+            printfString(8, "Count");
+            printfString(8, "Waiting");
+            putsUart0("\n\n");
             uint8_t i = 0;
             for(; i < MAX_SEM_INFO_SIZE; i++)
             {
-                printfString(12, semInfo[i].name);
-                putsUart0(" | ");
-                printUint8InDecimal(semInfo[i].count);
-                putsUart0(" | ");
+                printfString(14, semInfo[i].name);
+                printfInteger("%u", 8, semInfo[i].count);
                 uint8_t j = 0;
                 for(; j < semInfo[i].waitingTasksNumber; j++)
-                {
-                    printUint8InDecimal(semInfo[i].waitQueue[j]);
-                    if(j != semInfo[i].waitingTasksNumber - 1)
-                        putsUart0(", ");
-                }
+                    printfInteger("%u", 8, semInfo[i].waitQueue[j]);
                 putcUart0('\n');
             }
+            putcUart0('\n');
         }
         else if(isCommand(&data, "kill", 1))
         {
