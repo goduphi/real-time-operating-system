@@ -165,7 +165,7 @@ void readKeys()
         }
         if ((buttons & 4) != 0)
         {
-            restartThread(flash4Hz);
+            resume("Flash4Hz");
         }
         if ((buttons & 8) != 0)
         {
@@ -260,7 +260,7 @@ int main(void)
     createSemaphore(resource, 1);
 
     // Add required idle process at lowest priority
-    ok = createThread(idle, "Idle", 7, 2000);
+    ok = createThread(idle, "Idle", 7, 1024);
 
     // Add other processes
 
@@ -269,10 +269,10 @@ int main(void)
     ok &= createThread(oneshot, "OneShot", 2, 1024);
     ok &= createThread(readKeys, "ReadKeys", 6, 1024);
     ok &= createThread(debounce, "Debounce", 6, 1024);
-    ok &= createThread(important, "Important", 0, 1024);
+    ok &= createThread(important, "Important", 0, 2000);
     ok &= createThread(uncooperative, "Uncoop", 6, 1024);
     ok &= createThread(errant, "Errant", 6, 1024);
-    ok &= createThread(shell, "Shell", 6, 1024);
+    ok &= createThread(shell, "Shell", 6, 3000);
 
     // Loads up the task indices from the tcb in order of priority
     initTaskNextPriorities();

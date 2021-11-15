@@ -48,7 +48,7 @@ uint16_t systickCount = 0;
 
 semaphore semaphores[MAX_SEMAPHORES];
 
-schedulerId schedulerIdCurrent = PRIORITY;
+schedulerId schedulerIdCurrent = ROUND_ROBIN;
 bool preemption = false;
 
 /*
@@ -366,11 +366,11 @@ void MPUFaultHandler()
     uint32_t* psp = getPsp();
 
     // Print MSP and PSP
-    putsUart0("\n MSP = 0x");
+    putsUart0("\nMSP = 0x");
     printUint32InHex((uint32_t)msp);
     putcUart0('\n');
 
-    putsUart0(" PSP = 0x");
+    putsUart0("PSP = 0x");
     printUint32InHex((uint32_t)psp);
     putcUart0('\n');
 
@@ -437,6 +437,7 @@ void PendSVISR()
     // Check if it's an instruction error or a data error
     if(NVIC_FAULT_STAT_R & NVIC_FAULT_STAT_IERR)
     {
+        tcb[taskCurrent].state = STATE_KILLED;
         // Clear instruction access violation
         NVIC_FAULT_STAT_R |= NVIC_FAULT_STAT_IERR;
         putsUart0("IERR, called from MPU\n\n");
@@ -444,9 +445,10 @@ void PendSVISR()
 
     if(NVIC_FAULT_STAT_R & NVIC_FAULT_STAT_DERR)
     {
+        tcb[taskCurrent].state = STATE_KILLED;
         // Clear data access violation
         NVIC_FAULT_STAT_R |= NVIC_FAULT_STAT_DERR;
-        putsUart0("DERR, called from MPU\n\n");
+        putsUart0("\nDERR, called from MPU\n\n");
     }
 
     // Save the context of the current task
@@ -598,7 +600,6 @@ void initRtos()
         tcb[i].pid = 0;
     }
 
-
     // Enable the MPU
     enableBackgroundRegionRule();
     enableFlashRule();
@@ -607,11 +608,6 @@ void initRtos()
     enableSRAMRule(SRAM_REGION_1, SIZE_8KIB, REGION_3);
     enableSRAMRule(SRAM_REGION_2, SIZE_8KIB, REGION_4);
     enableSRAMRule(SRAM_REGION_3, SIZE_8KIB, REGION_5);
-
-    sRAMSubregionDisable(REGION_2, 0xE0);
-    sRAMSubregionDisable(REGION_3, 0xFF);
-    sRAMSubregionDisable(REGION_4, 0xFF);
-    sRAMSubregionDisable(REGION_5, 0xFF);
 
     enableMPU();
 }
@@ -850,6 +846,7 @@ void startRtos()
     _fn fn = (_fn)tcb[taskCurrent].pid;
     // Mark the task as ready because we are going to run it
     tcb[taskCurrent].state = STATE_READY;
+    setSrdBits(tcb[taskCurrent].srd);
     disablePrivilegeMode();
     fn();
 }
