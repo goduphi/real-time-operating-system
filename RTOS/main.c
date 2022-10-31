@@ -1,13 +1,13 @@
+#include <mcuSpecific/clock/clock.h>
+#include <mcuSpecific/include/tm4c123gh6pm.h>
+#include <mcuSpecific/uart/uart0.h>
+#include <rtos/include/cli.h>
+#include <rtos/include/kernel.h>
+#include <rtos/include/peripheral.h>
+#include <rtos/include/syscalls.h>
+#include <rtos/include/wait.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include "tm4c123gh6pm.h"
-#include "clock.h"
-#include "kernel.h"
-#include "syscalls.h"
-#include "cli.h"
-#include "uart0.h"
-#include "wait.h"
-#include "peripheral.h"
 
 // REQUIRED: correct these bitbanding references for the off-board LEDs
 #define BLUE_LED     (*((volatile uint32_t *)(0x42000000 + (0x400253FC-0x40000000)*32 + 2*4))) // on-board blue LED
@@ -235,6 +235,16 @@ void important()
     }
 }
 
+void dummy(void)
+{
+    uint8_t i = 0;
+    for (i = 0; i < 100; i++)
+    {
+        // Step
+    }
+    yield();
+}
+
 int main(void)
 {
     bool ok;
@@ -263,7 +273,6 @@ int main(void)
     ok = createThread(idle, "Idle", 7, 1024);
 
     // Add other processes
-
     ok &= createThread(lengthyFn, "LengthyFn", 6, 1024);
     ok &= createThread(flash4Hz, "Flash4Hz", 4, 1024);
     ok &= createThread(oneshot, "OneShot", 2, 1024);
