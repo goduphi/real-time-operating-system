@@ -6,8 +6,8 @@
  *      Author: Sarker Nadir Afridi Azmi
  */
 
-#include <mcuSpecific/include/tm4c123gh6pm.h>
-#include <mcuSpecific/include/tm4c123gh6pmMemoryMap.h>
+#include <mcuSpecific/common_includes/tm4c123gh6pm.h>
+#include <mcuSpecific/common_includes/tm4c123gh6pmMemoryMap.h>
 #include <mcuSpecific/mpu/mpu.h>
 
 #define MPU_AP_FIELD_OFFSET         (24)

@@ -18,9 +18,9 @@
 // Device includes, defines, and assembler directives
 //-----------------------------------------------------------------------------
 
-#include <mcuSpecific/include/tm4c123gh6pm.h>
+#include <mcuSpecific/common_includes/tm4c123gh6pm.h>
 #include <mcuSpecific/uart/uart0.h>
-#include <rtos/include/syscalls.h>
+#include <rtos/syscalls/syscalls.h>
 #include <stdint.h>
 #include <stdbool.h>
 

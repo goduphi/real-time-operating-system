@@ -11,7 +11,7 @@
 //-----------------------------------------------------------------------------
 // Device includes, defines, and assembler directives
 //-----------------------------------------------------------------------------
-#include <mcuSpecific/include/tm4c123gh6pm.h>
+#include <mcuSpecific/common_includes/tm4c123gh6pm.h>
 #include <rtos/include/wait.h>
 #include <stdint.h>
 

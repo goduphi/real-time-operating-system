@@ -1,27 +1,65 @@
-#include <mcuSpecific/clock/clock.h>
-#include <mcuSpecific/include/tm4c123gh6pm.h>
-#include <mcuSpecific/uart/uart0.h>
-#include <rtos/include/cli.h>
-#include <rtos/include/kernel.h>
-#include <rtos/include/peripheral.h>
-#include <rtos/include/syscalls.h>
-#include <rtos/include/wait.h>
-#include <stdbool.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <mcuSpecific/common_includes/tm4c123gh6pm.h>
+#include <mcuSpecific/clock/clock.h>
+#include <mcuSpecific/uart/uart0.h>
+#include <mcuSpecific/gpio/gpio.h>
+#include <rtos/kernel/kernel.h>
+#include <rtos/syscalls/syscalls.h>
+#include <rtos/cli/cli.h>
+#include <rtos/include/wait.h>
+
+#define keyPressed      (1)
+#define keyReleased     (2)
+#define flashReq        (3)
+#define resource        (4)
 
 // REQUIRED: correct these bitbanding references for the off-board LEDs
-#define BLUE_LED     (*((volatile uint32_t *)(0x42000000 + (0x400253FC-0x40000000)*32 + 2*4))) // on-board blue LED
-#define RED_LED      (*((volatile uint32_t *)(0x42000000 + (0x400043FC-0x40000000)*32 + 2*4))) // off-board red LED
-#define GREEN_LED    (*((volatile uint32_t *)(0x42000000 + (0x400243FC-0x40000000)*32 + 0*4))) // off-board green LED
-#define YELLOW_LED   (*((volatile uint32_t *)(0x42000000 + (0x400043FC-0x40000000)*32 + 4*4))) // off-board yellow LED
-#define ORANGE_LED   (*((volatile uint32_t *)(0x42000000 + (0x400043FC-0x40000000)*32 + 3*4))) // off-board orange LED
+#define BLUE_LED        (*((volatile uint32_t *)(0x42000000 + (0x400253FC-0x40000000)*32 + 2*4))) // on-board blue LED
+#define RED_LED         (*((volatile uint32_t *)(0x42000000 + (0x400043FC-0x40000000)*32 + 2*4))) // off-board red LED
+#define GREEN_LED       (*((volatile uint32_t *)(0x42000000 + (0x400243FC-0x40000000)*32 + 0*4))) // off-board green LED
+#define YELLOW_LED      (*((volatile uint32_t *)(0x42000000 + (0x400043FC-0x40000000)*32 + 4*4))) // off-board yellow LED
+#define ORANGE_LED      (*((volatile uint32_t *)(0x42000000 + (0x400043FC-0x40000000)*32 + 3*4))) // off-board orange LED
 
-void initHw()
+void initHw(void)
 {
     initSystemClockTo40Mhz();
-    initLedPb();
-    initSysTick(SYSTIC_1KHZ);
-    initTimer1();
+    initUart0();
+
+    enablePort(PORTA);
+    enablePort(PORTB);
+    enablePort(PORTC);
+    enablePort(PORTD);
+    enablePort(PORTE);
+    enablePort(PORTF);
+
+    // PB2 is connected to the anode of the LED
+    selectPinPushPullOutput(PORTB, 2);
+    setPinValue(PORTB, 2, 1);
+
+    selectPinPushPullOutput(PORTA, 2);
+    selectPinPushPullOutput(PORTA, 3);
+    selectPinPushPullOutput(PORTA, 4);
+    selectPinPushPullOutput(PORTE, 0);
+    selectPinPushPullOutput(PORTF, 2);
+
+    setPinCommitControl(PORTD, 7);
+
+    // Configure all the push buttons pins to be inputs
+    selectPinDigitalInput(PORTC, 4);
+    selectPinDigitalInput(PORTC, 5);
+    selectPinDigitalInput(PORTC, 6);
+    selectPinDigitalInput(PORTC, 7);
+    selectPinDigitalInput(PORTD, 6);
+    selectPinDigitalInput(PORTD, 7);
+
+    // Configure pull-ups for all the push buttons
+    enablePinPullup(PORTC, 4);
+    enablePinPullup(PORTC, 5);
+    enablePinPullup(PORTC, 6);
+    enablePinPullup(PORTC, 7);
+    enablePinPullup(PORTD, 6);
+    enablePinPullup(PORTD, 7);
 
     // Turn off all the LEDs
     BLUE_LED = 0;
@@ -29,69 +67,41 @@ void initHw()
     GREEN_LED = 1;
     YELLOW_LED = 1;
     ORANGE_LED = 1;
-
-    // This will be removed later
-    initUart0();
 }
 
 //-----------------------------------------------------------------------------
 // YOUR UNIQUE CODE
 // REQUIRED: add any custom code in this space
 //-----------------------------------------------------------------------------
-
-/*
-int testFn()
+uint8_t readPbs(void)
 {
-    int x = 12;
-    int y = 1;
-    int z = 4;
-    int result = x + y + z;
-    return result;
+    uint8_t sum = 0;
+    if(!getPinValue(PORTC, 4))
+        sum += 1;
+    if(!getPinValue(PORTC, 5))
+        sum += 2;
+    if(!getPinValue(PORTC, 6))
+        sum += 4;
+    if(!getPinValue(PORTC, 7))
+        sum += 8;
+    if(!getPinValue(PORTD, 6))
+        sum += 16;
+    if(!getPinValue(PORTD, 7))
+        sum += 32;
+    return sum;
 }
-
-void readFlash()
-{
-    (*((volatile uint32_t *)0x0003FFFC));
-}
-
-void testPeripheralBitband()
-{
-    // Test peripheral region - 0x40000000
-    SYSCTL_RCGCGPIO_R = SYSCTL_RCGCGPIO_R5;
-    _delay_cycles(3);
-
-    GPIO_PORTF_DIR_R = 2;
-    GPIO_PORTF_DEN_R = 2;
-
-    // Test bit-band region - 0x42000000
-    (*((volatile uint32_t *)(0x42000000 + (0x400253FC-0x40000000)*32 + 1*4))) = 1;
-}
-*/
 
 // ------------------------------------------------------------------------------
 //  Task functions
 // ------------------------------------------------------------------------------
-
 // one task must be ready at all times or the scheduler will fail
 // the idle task is implemented for this purpose
 void idle()
 {
     while(true)
     {
-        /*
-        // Debug code
-        __asm(" MOV R4, #69");
-        __asm(" MOV R5, #0x19");
-        __asm(" MOV R6, #0x12");
-        __asm(" MOV R7, #0x96");
-        __asm(" MOV R8, #69");
-        __asm(" MOV R9, #0x69");
-        __asm(" MOV R10, #69");
-        __asm(" MOV R11, #0x277");
-        */
-
         ORANGE_LED = 0;
-        waitMicrosecond(1000);
+        waitMicrosecond(1000000);
         ORANGE_LED = 1;
         yield();
     }
@@ -171,7 +181,6 @@ void readKeys()
         {
             kill((uint32_t)flash4Hz);
         }
-        // Will not be implemented
         if ((buttons & 16) != 0)
         {
             // setThreadPriority(lengthyFn, 4);
@@ -235,26 +244,12 @@ void important()
     }
 }
 
-void dummy(void)
-{
-    uint8_t i = 0;
-    for (i = 0; i < 100; i++)
-    {
-        // Step
-    }
-    yield();
-}
-
 int main(void)
 {
-    bool ok;
+    bool ok = true;
 
     // Initialize hardware
     initHw();
-
-    // Enable the Memory Management Fault Handler
-    enableExceptionHandler(NVIC_SYS_HND_CTRL_USAGE | NVIC_SYS_HND_CTRL_BUS | NVIC_SYS_HND_CTRL_MEM);
-
     initRtos();
 
     // Power-up flash
@@ -278,7 +273,7 @@ int main(void)
     ok &= createThread(oneshot, "OneShot", 2, 1024);
     ok &= createThread(readKeys, "ReadKeys", 6, 1024);
     ok &= createThread(debounce, "Debounce", 6, 1024);
-    ok &= createThread(important, "Important", 0, 2000);
+    ok &= createThread(important, "Important", 0, 1024);
     ok &= createThread(uncooperative, "Uncoop", 6, 1024);
     ok &= createThread(errant, "Errant", 6, 1024);
     ok &= createThread(shell, "Shell", 6, 3000);
@@ -292,9 +287,11 @@ int main(void)
 
     // Start up RTOS
     if (ok)
+    {
         startRtos(); // never returns
+    }
     else
+    {
         RED_LED = 0;
-
-    return 0;
+    }
 }

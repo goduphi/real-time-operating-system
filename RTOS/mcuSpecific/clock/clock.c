@@ -17,7 +17,7 @@
 //-----------------------------------------------------------------------------
 
 #include <mcuSpecific/clock/clock.h>
-#include <mcuSpecific/include/tm4c123gh6pm.h>
+#include <mcuSpecific/common_includes/tm4c123gh6pm.h>
 #include <stdint.h>
 
 //-----------------------------------------------------------------------------

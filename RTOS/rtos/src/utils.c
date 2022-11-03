@@ -1,71 +1,96 @@
 /*
- * utils.c
- *
  *  Created on: Oct 14, 2021
  *      Author: Sarker Nadir Afridi Azmi
  */
 
+#include <stdarg.h>
 #include <mcuSpecific/uart/uart0.h>
 #include <rtos/include/tString.h>
 #include <rtos/include/utils.h>
 
-void printUint8InDecimal(uint8_t n)
+inline void rtosPutc(const char c)
 {
-    /*
-     * Depending how many digits n has, set the divider
-     * If n has only one digit, this will prevent leading
-     * zeros from being printed.
-     */
-    uint16_t divider = 0;
-    if(n < 10)
-        divider = 1;
-    else if(n < 100)
-        divider = 10;
-    else if(n < 1000)
-        divider = 100;
+    putcUart0(c);
+}
 
-    while(divider)
+inline void rtosPuts(const char *string)
+{
+    putsUart0((char *)string);
+}
+
+inline uint8_t getNumberOfDigitsDecimal(uint32_t n)
+{
+    uint8_t res = 0;
+
+    if(n == 0)
     {
-        uint8_t currentDigit = n / divider;
-        divider /= 10;
-        putcUart0((currentDigit % 10) + '0');
+        return 1;
+    }
+
+    while(n)
+    {
+        res++;
+        n /= 10;
+    }
+
+    return res;
+}
+
+inline void rtosPrintReservedSpace(bool reserveSpace, uint8_t spaceCount, uint8_t spaceToSubtract)
+{
+    if (reserveSpace)
+    {
+        spaceCount -= spaceToSubtract;
+        while (spaceCount--)
+        {
+            rtosPutc(' ');
+        }
     }
 }
 
-void printUint8InHex(uint8_t n)
+void printU8Decimal(uint8_t n)
 {
-    // Print 4 bits at a time
-    int8_t i = 0;
-    for(i = 1; i >= 0; i--)
+    // An 8-bit integer is always limited to 3 digits
+    uint8_t _2ndDigit = (n % 10);   // 2nd digit
+    n /= 10;
+    uint8_t _1stDigit = (n % 10);   // 1st digit
+    n /= 10;                        // Implied 0th digit
+
+    if (n != 0)
     {
-        uint8_t currentNumber = (n >> (i << 2)) & 0xF;
-        if(currentNumber > 9)
-        {
-            switch(currentNumber)
-            {
-            case 10:
-                putcUart0('A');
-                break;
-            case 11:
-                putcUart0('B');
-                break;
-            case 12:
-                putcUart0('C');
-                break;
-            case 13:
-                putcUart0('D');
-                break;
-            case 14:
-                putcUart0('E');
-                break;
-            case 15:
-                putcUart0('F');
-                break;
-            }
-        }
-        else
-            printUint8InDecimal(currentNumber);
+        rtosPutc(n + '0');
     }
+
+    if (_1stDigit != 0)
+    {
+        rtosPutc(_1stDigit + '0');
+    }
+
+    // Print the last digit as the value passed in can be a 0
+    rtosPutc(_2ndDigit + '0');
+}
+
+void printU8Hex(uint8_t n)
+{
+    uint8_t lowerNibble = (n & 0xF);
+    char digit = '\0';
+
+    n >>= 4;    // Implied upper nibble
+    digit = ((n > 9) ? (n - 10 + 'A') : (n + '0'));
+
+    rtosPutc(digit);
+
+    digit = ((lowerNibble > 9) ? (lowerNibble - 10 + 'A') : (lowerNibble + '0'));
+
+    rtosPutc(digit);
+}
+
+void printUint32InHex(uint32_t n)
+{
+    printU8Hex((n >> 24) & 0xFF);
+    printU8Hex((n >> 16) & 0xFF);
+    printU8Hex((n >> 8) & 0xFF);
+    printU8Hex(n & 0xFF);
 }
 
 // This power function is very limited and not the best implementation.
@@ -154,14 +179,6 @@ void printUint32InDecimal(uint32_t n)
         putcUart0(buffer[i]);
 }
 
-void printUint32InHex(uint32_t n)
-{
-    printUint8InHex((n >> 24) & 0xFF);
-    printUint8InHex((n >> 16) & 0xFF);
-    printUint8InHex((n >> 8) & 0xFF);
-    printUint8InHex(n & 0xFF);
-}
-
 void printUint32InBinary(uint32_t n)
 {
     uint32_t i = 0x80000000;
@@ -174,26 +191,13 @@ void printUint32InBinary(uint32_t n)
 }
 
 // The function is intentionally written with only 255 max space reservation
-void printfString(uint8_t spaceToReserve, char* s)
-{
-    putsUart0(s);
-    spaceToReserve -= strLen(s);
-    while(spaceToReserve--)
-        putcUart0(' ');
-}
-
-uint8_t numberOfDigitsInDecimalInteger(uint32_t n)
-{
-    if(n == 0)
-        return 1;
-    uint8_t res = 0;
-    while(n)
-    {
-        res++;
-        n /= 10;
-    }
-    return res;
-}
+//void printfString(uint8_t spaceToReserve, char* s)
+//{
+//    putsUart0(s);
+//    spaceToReserve -= strLen(s);
+//    while(spaceToReserve--)
+//        putcUart0(' ');
+//}
 
 // Only looks for one conversion specifier
 void printfInteger(const char* format, int8_t spaceToReserve, uint32_t n)
@@ -211,7 +215,7 @@ void printfInteger(const char* format, int8_t spaceToReserve, uint32_t n)
     i++;
     bool padLeft = (format[i] == '-');
 
-    uint8_t nLen = numberOfDigitsInDecimalInteger(n);
+    uint8_t nLen = getNumberOfDigitsDecimal(n);
 
     if(padLeft && spaceToReserve >= nLen)
     {
@@ -249,4 +253,112 @@ void printfInteger(const char* format, int8_t spaceToReserve, uint32_t n)
         putcUart0(format[i]);
         i++;
     }
+}
+
+int rtosPrintf(const char *format, ...)
+{
+    int ret = 0;
+
+    va_list argList;
+    va_start(argList, format);
+
+    if (format == 0)
+    {
+        return -1;
+    }
+
+    while ((*format != '\0') && (*format != '%'))
+    {
+        rtosPutc(*format);
+        format++;
+    }
+
+    while (*format != '\0')
+    {
+        if (*format == '%')
+        {
+            bool    reserveSpace    = false;
+            bool    rightJustify    = false;
+            uint8_t spaceCount = 0;
+            uint8_t spaceToSubtract = 0;
+
+            format++;
+
+            // Special case: % may be the last character
+            if (*format == '\0')
+            {
+                return ret;
+            }
+
+            // Special case: % may be followed by another %
+            if (*format == '%')
+            {
+                rtosPutc('%');
+            }
+
+            if (*format == '-')
+            {
+                rightJustify = true;
+                format++;
+            }
+
+            // Calculate space to reserve
+            while ((*format >= '0') && (*format <= '9'))
+            {
+                reserveSpace = true;
+                spaceCount = ((spaceCount * 10) + (*format - '0'));
+                format++;
+            }
+
+            switch (*format)
+            {
+            case 'x':
+            case 'X':
+                {
+                    const uint32_t arg = va_arg(argList, uint32_t);
+                    printUint32InHex(arg);
+                }
+                break;
+            case 'u':
+            case 'U':
+                {
+                    const uint32_t arg = va_arg(argList, uint32_t);
+                    spaceToSubtract = getNumberOfDigitsDecimal(arg);
+                    rtosPrintReservedSpace((reserveSpace && rightJustify), spaceCount, spaceToSubtract);
+                    printUint32InDecimal(arg);
+                }
+                break;
+            case 'c':
+                {
+                    const char c = va_arg(argList, char);
+                    rtosPrintReservedSpace((reserveSpace && rightJustify), spaceCount, 1);
+                    rtosPutc(c);
+                }
+                break;
+            case 's':
+                {
+                    const char *arg = va_arg(argList, const char *);
+                    spaceToSubtract = strLen(arg);
+                    rtosPrintReservedSpace((reserveSpace && rightJustify), spaceCount, spaceToSubtract);
+                    rtosPuts(arg);
+                }
+                break;
+            default:
+                rtosPuts("Conversion specifier not handled");
+                break;
+            }
+
+            rtosPrintReservedSpace((reserveSpace && !rightJustify), spaceCount, spaceToSubtract);
+        }
+        else
+        {
+            rtosPutc(*format);
+        }
+
+        format++;
+    }
+
+    va_end(argList);
+
+    return ret;
 }

@@ -1,17 +1,18 @@
-/* Common Terminal Interface Library
- * Sarker Nadir Afridi Azmi
+/*
+ * Common Terminal Interface Library
+ *      Author: Sarker Nadir Afridi Azmi
  *
  * This file contains the implementation of the functions prototypes defined in
  * common_terminal_interface.h.
  */
 
-#include <mcuSpecific/include/tm4c123gh6pm.h>
+#include <mcuSpecific/common_includes/tm4c123gh6pm.h>
+#include <mcuSpecific/gpio/gpio.h>
 #include <mcuSpecific/uart/uart0.h>
-#include <rtos/include/cli.h>
-#include <rtos/include/gpio.h>
-#include <rtos/include/syscalls.h>
+#include <rtos/cli/cli.h>
 #include <rtos/include/tString.h>
 #include <rtos/include/utils.h>
+#include <rtos/syscalls/syscalls.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -92,20 +93,11 @@ static void parseField(USER_DATA* data)
                 !(data->buffer[i] == '&'))
         {
             isNewToken = false;
-            // Replace the delimeters with null terminators
+            // Replace the delimiters with null terminators
             data->buffer[i] = '\0';
         }
     }
     return;
-}
-
-// Checks to see if a particular command is valid or not
-bool isCommand(USER_DATA* data, const char strCommand[], uint8_t minArguments)
-{
-    // Only count the arguments
-    if(data->fieldCount - 1 < minArguments) return false;
-    if(stringCompare(getFieldString(data, 0), strCommand, MAX_CHARS)) return true;
-    return false;
 }
 
 // Get a pointer to the requested string field
@@ -134,43 +126,52 @@ int32_t getFieldInteger(USER_DATA* data, uint8_t fieldNumber)
     return signedInteger32bits;
 }
 
+// Checks to see if a particular command is valid or not
+bool isCommand(USER_DATA* data, const char strCommand[], uint8_t minArguments)
+{
+    // Only count the arguments
+    if(data->fieldCount - 1 < minArguments) return false;
+    if(stringCompare(getFieldString(data, 0), strCommand, MAX_CHARS)) return true;
+    return false;
+}
+
 void shell(void)
 {
-    // initUart0();
-    // setUart0BaudRate(115200, 40e6);
-
-    USER_DATA data;
+    USER_DATA data = { 0 };
 
     while(true)
     {
-        putsUart0("goduphi> ");
+        rtosPrintf("goduphi> ");
         getsUart0(&data);
         parseField(&data);
 
         if(isCommand(&data, "reboot", 0))
+        {
             rebootSystem();
+        }
         else if(isCommand(&data, "ps", 0))
         {
-            taskInfo ti[MAX_TASKS_TASK_INFO];
-            uint8_t tiCount = 0;
-            ps(ti, &tiCount);
-            uint32_t totalTime = 0;
-            uint8_t i = 0;
-            for(; i < tiCount; i++)
-                totalTime += ti[i].time;
+            const char *taskStates[6]           = { "INVALID", "UNRUN", "READY", "DELAYED", "BLOCKED", "KILLED" };
+            uint8_t     i                       = 0;
+            uint32_t    totalTime               = 0;
+            uint8_t     tiCount                 = 0;
+            taskInfo    ti[MAX_TASKS_TASK_INFO] = { 0 };
 
-            putcUart0('\n');
-            printfString(12, "Task Name");
-            printfString(12, "PID");
-            printfString(15, "CPU Usage (%)");
-            printfString(12, "State");
-            putsUart0("\n\n");
+            ps(ti, &tiCount);
+
             for(i = 0; i < tiCount; i++)
             {
-                printfString(12, ti[i].name);
-                printfInteger("%u", 12, ti[i].pid);
+                totalTime += ti[i].time;
+            }
 
-                // This is very crucial. Multiplying by 100 * 100 causes a 32 bit uint overflow.
+            rtosPrintf("\n%12s%12s%15s%12s\n%12s%12s%15s%12s\n", "Task Name", "PID", "CPU Usage (%)", "State",
+                       "---------", "---", "-------------", "-----");
+
+            for(i = 0; i < tiCount; i++)
+            {
+                rtosPrintf("%12s%12u", ti[i].name, ti[i].pid);
+
+                // This is very crucial. Multiplying by 100 * 100 causes a 32 bit unsigned int to overflow.
                 // Use a uint64_t instead.
                 uint64_t cpuUsage = (uint64_t)ti[i].time * 100 * 100;
                 cpuUsage /= totalTime;
@@ -180,51 +181,25 @@ void shell(void)
                 cpuUsage /= 10;
                 char oneOverHundred = cpuUsage % 10 + '0';
                 cpuUsage /= 10;
-                printfInteger("%-u", 2, (uint32_t)cpuUsage);
-                putcUart0('.');
-                putcUart0(oneOverTen);
-                putcUart0(oneOverHundred);
-                putsUart0("          ");
 
-                // The state of the task should not be known by the user
-                // This is just for demonstration purposes
-                switch(ti[i].state)
-                {
-                case 0:
-                    printfString(12, "INVALID");
-                    break;
-                case 1:
-                    printfString(12, "UNRUN");
-                    break;
-                case 2:
-                    printfString(12, "READY");
-                    break;
-                case 3:
-                    printfString(12, "DELAYED");
-                    break;
-                case 4:
-                    printfString(12, "BLOCKED");
-                    break;
-                case 5:
-                    printfString(12, "KILLED");
-                    break;
-                }
-                putcUart0('\n');
+                rtosPrintf("%-9u.%c%3c%s\n", (uint32_t)cpuUsage, oneOverTen, oneOverHundred, taskStates[ti[i].state]);
             }
-            putcUart0('\n');
+
+            rtosPrintf("\n");
         }
         else if(isCommand(&data, "ipcs", 0))
         {
             semaphoreInfo semInfo[MAX_SEM_INFO_SIZE];
             ipcs(semInfo);
-            printfString(14, "\nSemaphore");
-            printfString(8, "Count");
-            printfString(8, "Waiting");
-            putsUart0("\n\n");
+
+            rtosPrintf("\n%14s", "Semaphore");
+            rtosPrintf("%8s", "Count");
+            rtosPrintf("%8s\n\n", "Waiting");
+
             uint8_t i = 0;
             for(; i < MAX_SEM_INFO_SIZE; i++)
             {
-                printfString(14, semInfo[i].name);
+                rtosPrintf("%14s", semInfo[i].name);
                 printfInteger("%u", 8, semInfo[i].count);
                 uint8_t j = 0;
                 for(; j < semInfo[i].waitingTasksNumber; j++)
@@ -245,41 +220,55 @@ void shell(void)
         }
         else if(isCommand(&data, "pi", 1))
         {
-            // Will not be implemented
+            // Fix me: Implement
         }
         else if(isCommand(&data, "preempt", 1))
         {
-            char* arg = getFieldString(&data, 1);
-            bool ok = stringCompare(arg, "on", 4);
+            const char* arg = getFieldString(&data, 1);
+            const bool  ok  = stringCompare(arg, "on", 2);
+
             if(ok)
-                putsUart0("Preemption on\n");
+            {
+                rtosPrintf("Turning preemption on\n");
+            }
             else
-                putsUart0("Preemption off\n");
+            {
+                rtosPrintf("Turning preemption off\n");
+            }
+
             preempt(ok);
         }
         else if(isCommand(&data, "sched", 1))
         {
-            char* arg = getFieldString(&data, 1);
-            bool ok = stringCompare(arg, "prio", 4);
+            const char *arg = getFieldString(&data, 1);
+            const bool  ok  = stringCompare(arg, "prio", 4);
+
             if(ok)
-                putsUart0("Switching to Priority Scheduling\n");
+            {
+                rtosPrintf("Switching to Priority Scheduling\n");
+            }
             else
-                putsUart0("Switching to Round Robin Scheduling\n");
+            {
+                rtosPrintf("Switching to Round Robin Scheduling\n");
+            }
+
             sched(ok);
         }
         else if(isCommand(&data, "pidof", 1))
         {
-            char* taskName = getFieldString(&data, 1);
-            uint32_t pid = 0;
+            const char *taskName = getFieldString(&data, 1);
+            uint32_t    pid      = 0;
+
             pidof(&pid, taskName);
+
             if(pid == 0)
             {
-                putsUart0("Task not found\n");
-                continue;
+                rtosPrintf("Task not found\n");
             }
-            putsUart0("PID: 0x");
-            printUint32InHex(pid);
-            putcUart0('\n');
+            else
+            {
+                rtosPrintf("PID: 0x%x\n", pid);
+            }
         }
         else
         {

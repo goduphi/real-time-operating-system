@@ -1,19 +1,12 @@
 /*
- * syscalls.c
- *
  *  Created on: Sep 22, 2021
  *      Author: Sarker Nadir Afridi Azmi
  */
 
-
-#include <mcuSpecific/include/tm4c123gh6pm.h>
-#include <mcuSpecific/uart/uart0.h>
-#include <rtos/include/gpio.h>
-#include <rtos/include/syscalls.h>
-#include <stdio.h>  // This will be removed from the future version as it takes 4096 Bytes of stack space to call
+#include <rtos/syscalls/syscalls.h>
 
 // REQUIRED: modify this function to yield execution back to scheduler using pendsv
-void yield()
+void yield(void)
 {
     __asm(" SVC  #7");
 }
@@ -38,12 +31,9 @@ void post(int8_t semaphore)
 }
 
 // Turns priority inheritance on or off
-// Will not be implemented
 void pi(bool on)
 {
-    char buffer[16];
-    sprintf(buffer, "PI %s\n", (on) ? "on" : "off");
-    putsUart0(buffer);
+    return;
 }
 
 // Selected priority or round-robin scheduling
@@ -58,13 +48,14 @@ void preempt(bool on)
     __asm(" SVC #12");
 }
 
-void rebootSystem()
+// Requests a hard reset of the microcontroller unit
+void rebootSystem(void)
 {
     __asm(" SVC #13");
 }
 
 // Displays the PID of the process (thread)
-void pidof(uint32_t* pid, char name[])
+void pidof(uint32_t *pid, const char name[])
 {
     __asm(" SVC #14");
 }
@@ -76,19 +67,19 @@ void kill(uint32_t pid)
 }
 
 // Insert proc_name &
-void resume(const char* name)
+void resume(const char name[])
 {
     __asm(" SVC #16");
 }
 
 // Displays the inter-process (thread) communication state
-void ipcs(semaphoreInfo* semInfo)
+void ipcs(semaphoreInfo *semInfo)
 {
     __asm(" SVC #17");
 }
 
 // Displays the process (thread) information
-void ps(taskInfo* ti, uint8_t* tiCount)
+void ps(taskInfo *ti, uint8_t *tiCount)
 {
     __asm(" SVC #18");
 }

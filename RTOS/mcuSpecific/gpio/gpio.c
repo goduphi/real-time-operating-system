@@ -16,8 +16,8 @@
 // Device includes, defines, and assembler directives
 //-----------------------------------------------------------------------------
 
-#include <mcuSpecific/include/tm4c123gh6pm.h>
-#include <rtos/include/gpio.h>
+#include <mcuSpecific/common_includes/tm4c123gh6pm.h>
+#include <mcuSpecific/gpio/gpio.h>
 #include <stdint.h>
 #include <stdbool.h>
 

@@ -53,15 +53,13 @@ extern uint32_t __STACK_TOP;
 // External declarations for the interrupt handlers used by the application.
 //
 //*****************************************************************************
-// To be added by user
-
-extern void MPUFaultHandler();
-extern void PendSVISR();
-extern void BusFaultHandler();
-extern void UsageFaultHandler();
-extern void FaultISR();
-extern void svCallIsr();
-extern void systickIsr();
+extern void faultIsr(void);
+extern void mpuFaultIsr(void);
+extern void busFaultIsr(void);
+extern void usageFaultIsr(void);
+extern void svCallIsr(void);
+extern void pendSvIsr(void);
+extern void sysTickIsr(void);
 
 //*****************************************************************************
 //
@@ -77,10 +75,10 @@ void (* const g_pfnVectors[])(void) =
                                             // The initial stack pointer
     ResetISR,                               // The reset handler
     NmiSR,                                  // The NMI handler
-    FaultISR,                               // The hard fault handler
-    MPUFaultHandler,                        // The MPU fault handler
-    BusFaultHandler,                        // The bus fault handler
-    UsageFaultHandler,                      // The usage fault handler
+    faultIsr,                               // The hard fault handler
+    mpuFaultIsr,                            // The MPU fault handler
+    busFaultIsr,                            // The bus fault handler
+    usageFaultIsr,                          // The usage fault handler
     0,                                      // Reserved
     0,                                      // Reserved
     0,                                      // Reserved
@@ -88,8 +86,8 @@ void (* const g_pfnVectors[])(void) =
     svCallIsr,                              // SVCall handler
     IntDefaultHandler,                      // Debug monitor handler
     0,                                      // Reserved
-    PendSVISR,                              // The PendSV handler
-    systickIsr,                             // The SysTick handler
+    pendSvIsr,                              // The PendSV handler
+    sysTickIsr,                             // The SysTick handler
     IntDefaultHandler,                      // GPIO Port A
     IntDefaultHandler,                      // GPIO Port B
     IntDefaultHandler,                      // GPIO Port C
@@ -282,7 +280,7 @@ NmiSR(void)
 
 /*
 static void
-FaultISR(void)
+faultIsr(void)
 {
     //
     // Enter an infinite loop.
